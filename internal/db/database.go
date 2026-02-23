@@ -63,8 +63,9 @@ func Connect(ctx context.Context, cfg Config) (*surrealdb.DB, error) {
 // через surrealdb.Query. Это создаёт (или обновляет) таблицы, индексы,
 // события и связи, описанные в схеме.
 //
-// Функция идемпотентна: повторный запуск безопасен, т. к. SurrealDB
-// перезаписывает DEFINE-объявления.
+// Функция идемпотентна: повторный запуск безопасен, т. к. все DEFINE
+// в schema.surql используют OVERWRITE (требование SurrealDB 3.0 —
+// без OVERWRITE или IF NOT EXISTS повторный DEFINE возвращает ошибку).
 func RunMigrations(ctx context.Context, db *surrealdb.DB) error {
 	schema, err := schemaFS.ReadFile("schema.surql")
 	if err != nil {
