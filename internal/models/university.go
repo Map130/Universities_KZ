@@ -1,0 +1,66 @@
+package models
+
+import (
+	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
+)
+
+// University — вуз Казахстана.
+// Соответствует таблице `university` в SurrealDB (SCHEMAFULL).
+type University struct {
+	// ID — идентификатор записи в SurrealDB (например, university:abc123).
+	// При создании может быть nil — SurrealDB сгенерирует автоматически.
+	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty"`
+
+	// Название вуза на трёх языках (kz / ru / en).
+	Name LocalizedName `json:"name" cbor:"name"`
+
+	// Аббревиатура ("МУИТ", "КазНУ", "SDU").
+	Abbr string `json:"abbr" cbor:"abbr"`
+
+	// Город, в котором расположен вуз.
+	City string `json:"city" cbor:"city"`
+
+	// Тип вуза: "public" (государственный) или "private" (частный).
+	Type UniversityType `json:"type" cbor:"type"`
+
+	// URL логотипа (MinIO / S3). Может отсутствовать.
+	LogoURL *string `json:"logo_url,omitempty" cbor:"logo_url,omitempty"`
+
+	// Официальный сайт вуза. Может отсутствовать.
+	Website *string `json:"website,omitempty" cbor:"website,omitempty"`
+
+	// Свободное описание вуза. Может отсутствовать.
+	Description *string `json:"description,omitempty" cbor:"description,omitempty"`
+
+	// Временные метки (заполняются SurrealDB автоматически).
+	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty"`
+	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty"`
+}
+
+// UniversityFilters содержит параметры фильтрации для списка вузов.
+type UniversityFilters struct {
+	// City — фильтр по городу (точное совпадение). Пустая строка = без фильтра.
+	City string
+
+	// Type — фильтр по типу вуза ("public" / "private"). Пустая строка = без фильтра.
+	Type UniversityType
+
+	// Search — строка полнотекстового поиска (оператор @@ в SurrealQL).
+	Search string
+
+	// Lang — язык поиска ("kz", "ru", "en"). По умолчанию "ru".
+	Lang string
+
+	// Limit — максимальное число записей (0 = без ограничения).
+	Limit int
+
+	// Offset — смещение для пагинации.
+	Offset int
+}
+
+// UniversityDetail — развёрнутое представление вуза со списком
+// предлагаемых специальностей (через графовую связь offers).
+type UniversityDetail struct {
+	University University           `json:"university"`
+	Offers     []OfferWithSpecialty `json:"offers"`
+}
