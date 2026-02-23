@@ -8,39 +8,40 @@ import (
 // Соответствует таблице `specialty` в SurrealDB (SCHEMAFULL).
 type Specialty struct {
 	// ID — идентификатор записи в SurrealDB (например, specialty:xyz789).
-	// При создании может быть nil — SurrealDB сгенерирует автоматически.
 	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty"`
 
-	// Уникальный код образовательной программы ("B057", "B058" и т. д.).
+	// Уникальный код образовательной программы ("6B06101", "6B07201" и т. д.).
 	Code string `json:"code" cbor:"code"`
 
 	// Название специальности на трёх языках (kz / ru / en).
 	Name LocalizedName `json:"name" cbor:"name"`
 
-	// Группа образовательных программ (например, "B05 - Естественные науки").
-	// В SurrealDB-схеме поле экранировано бэктиками (`group`), т. к. это
-	// зарезервированное слово, но в Go/CBOR это обычное поле.
-	Group string `json:"group" cbor:"group"`
+	// Группа образовательных программ — record link на specialty_group.
+	// При обычном SELECT возвращается как RecordID.
+	// При SELECT ... FETCH `group` — развёрнутый объект (см. SpecialtyExpanded).
+	Group surrealmodels.RecordID `json:"group" cbor:"group"`
 
 	// Временные метки (заполняются SurrealDB автоматически).
 	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty"`
 	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty"`
 }
 
+// SpecialtyExpanded — специальность с развёрнутой группой ОП (FETCH `group`).
+// Используется для API-ответов, где нужно показать и группу, и её предметы.
+type SpecialtyExpanded struct {
+	ID        *surrealmodels.RecordID       `json:"id,omitempty" cbor:"id,omitempty"`
+	Code      string                        `json:"code" cbor:"code"`
+	Name      LocalizedName                 `json:"name" cbor:"name"`
+	Group     SpecialtyGroup                `json:"group" cbor:"group"`
+	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty"`
+	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty"`
+}
+
 // SpecialtyFilters содержит параметры фильтрации для списка специальностей.
 type SpecialtyFilters struct {
-	// Search — строка полнотекстового поиска (оператор @@ в SurrealQL).
-	Search string
-
-	// Lang — язык поиска ("kz", "ru", "en"). По умолчанию "ru".
-	Lang string
-
-	// Group — фильтр по группе образовательных программ. Пустая строка = без фильтра.
-	Group string
-
-	// Limit — максимальное число записей (0 = без ограничения).
-	Limit int
-
-	// Offset — смещение для пагинации.
-	Offset int
+	Search    string // полнотекстовый поиск
+	Lang      string // язык ("kz", "ru", "en"), по умолчанию "ru"
+	GroupCode string // фильтр по коду группы ОП (например, "B057")
+	Limit     int
+	Offset    int
 }
