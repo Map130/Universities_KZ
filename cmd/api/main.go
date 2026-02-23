@@ -17,22 +17,23 @@ import (
 	"github.com/Map130/universities/internal/repository"
 )
 
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+func requireEnv(key string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok || value == "" {
+		log.Fatalf("FATAL: обязательная переменная окружения %s не задана", key)
 	}
-	return fallback
+	return value
 }
 
 func main() {
 	cfg := db.Config{
-		URL:       getEnv("SURREAL_URL", "ws://localhost:8000/rpc"),
-		User:      getEnv("SURREAL_USER", "root"),
-		Pass:      getEnv("SURREAL_PASS", "root"),
-		Namespace: getEnv("SURREAL_NS", "test"),
-		Database:  getEnv("SURREAL_DB", "test"),
+		URL:       requireEnv("SURREAL_URL"),
+		User:      requireEnv("SURREAL_USER"),
+		Pass:      requireEnv("SURREAL_PASS"),
+		Namespace: requireEnv("SURREAL_NS"),
+		Database:  requireEnv("SURREAL_DB"),
 	}
-	appPort := getEnv("APP_PORT", "8080")
+	appPort := requireEnv("APP_PORT")
 
 	ctx := context.Background()
 
