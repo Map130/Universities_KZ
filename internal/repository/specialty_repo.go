@@ -1,0 +1,293 @@
+package repository
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/surrealdb/surrealdb.go"
+	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
+
+	"github.com/Map130/universities/internal/models"
+)
+
+// SpecialtyRepository описывает контракт для работы со специальностями.
+type SpecialtyRepository interface {
+	// GetAll возвращает список специальностей с учётом фильтров
+	// (полнотекстовый поиск, группа, пагинация).
+	GetAll(ctx context.Context, f models.SpecialtyFilters) ([]models.Specialty, error)
+
+	// GetByID возвращает одну специальность по её RecordID.
+	GetByID(ctx context.Context, id surrealmodels.RecordID) (*models.Specialty, error)
+
+	// GetByCode возвращает специальность по уникальному коду ("B057", "B058" и т. д.).
+	// Использует уникальный индекс idx_specialty_code.
+	GetByCode(ctx context.Context, code string) (*models.Specialty, error)
+
+	// GetWithSubjects возвращает специальность вместе с необходимыми
+	// предметами ЕНТ (графовый запрос через edge-таблицу requires).
+	GetWithSubjects(ctx context.Context, id surrealmodels.RecordID) (*models.Specialty, []models.RequiredSubject, error)
+
+	// Create создаёт новую специальность и возвращает её
+	// (с заполненным ID и timestamps).
+	Create(ctx context.Context, s models.Specialty) (*models.Specialty, error)
+
+	// Update обновляет существующую специальность (MERGE-семантика).
+	Update(ctx context.Context, id surrealmodels.RecordID, s models.Specialty) (*models.Specialty, error)
+
+	// Delete удаляет специальность по ID.
+	Delete(ctx context.Context, id surrealmodels.RecordID) error
+
+	// CreateRequires создаёт графовую связь specialty -> subject
+	// с указанием приоритета предмета (1 = профильный, 2 = второй).
+	CreateRequires(ctx context.Context, specialtyID, subjectID surrealmodels.RecordID, input models.CreateRequiresInput) (*models.Requires, error)
+}
+
+// surrealSpecialtyRepo — реализация SpecialtyRepository поверх SurrealDB.
+type surrealSpecialtyRepo struct {
+	db *surrealdb.DB
+}
+
+// NewSpecialtyRepository создаёт репозиторий специальностей.
+func NewSpecialtyRepository(db *surrealdb.DB) SpecialtyRepository {
+	return &surrealSpecialtyRepo{db: db}
+}
+
+// ---------------------------------------------------------------------------
+//  GetAll
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyRepo) GetAll(ctx context.Context, f models.SpecialtyFilters) ([]models.Specialty, error) {
+	query := "SELECT * FROM specialty"
+	vars := map[string]any{}
+	clauses := []string{}
+
+	// Полнотекстовый поиск по названию специальности.
+	if f.Search != "" {
+		lang := f.Lang
+		if lang == "" {
+			lang = "ru"
+		}
+		switch lang {
+		case "kz", "ru", "en":
+			// допустимый язык
+		default:
+			lang = "ru"
+		}
+		clauses = append(clauses, fmt.Sprintf("name.%s @@ $search", lang))
+		vars["search"] = f.Search
+	}
+
+	// Фильтр по группе образовательных программ.
+	if f.Group != "" {
+		clauses = append(clauses, "`group` = $group")
+		vars["group"] = f.Group
+	}
+
+	// Сборка WHERE.
+	if len(clauses) > 0 {
+		query += " WHERE "
+		for i, c := range clauses {
+			if i > 0 {
+				query += " AND "
+			}
+			query += c
+		}
+	}
+
+	query += " ORDER BY code ASC"
+
+	// Пагинация.
+	if f.Limit > 0 {
+		query += " LIMIT $limit"
+		vars["limit"] = f.Limit
+	}
+	if f.Offset > 0 {
+		query += " START $offset"
+		vars["offset"] = f.Offset
+	}
+
+	results, err := surrealdb.Query[[]models.Specialty](ctx, r.db, query, vars)
+	if err != nil {
+		return nil, fmt.Errorf("specialty.GetAll: query: %w", err)
+	}
+
+	if len(*results) == 0 {
+		return []models.Specialty{}, nil
+	}
+
+	first := (*results)[0]
+	if first.Error != nil {
+		return nil, fmt.Errorf("specialty.GetAll: %w", first.Error)
+	}
+
+	return first.Result, nil
+}
+
+// ---------------------------------------------------------------------------
+//  GetByID
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyRepo) GetByID(ctx context.Context, id surrealmodels.RecordID) (*models.Specialty, error) {
+	result, err := surrealdb.Select[models.Specialty](ctx, r.db, id)
+	if err != nil {
+		return nil, fmt.Errorf("specialty.GetByID: %w", err)
+	}
+
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+//  GetByCode
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyRepo) GetByCode(ctx context.Context, code string) (*models.Specialty, error) {
+	results, err := surrealdb.Query[[]models.Specialty](
+		ctx, r.db,
+		"SELECT * FROM specialty WHERE code = $code LIMIT 1",
+		map[string]any{"code": code},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("specialty.GetByCode: query: %w", err)
+	}
+
+	if len(*results) == 0 {
+		return nil, fmt.Errorf("specialty.GetByCode: no query results")
+	}
+
+	first := (*results)[0]
+	if first.Error != nil {
+		return nil, fmt.Errorf("specialty.GetByCode: %w", first.Error)
+	}
+
+	if len(first.Result) == 0 {
+		return nil, fmt.Errorf("specialty.GetByCode: specialty with code %q not found", code)
+	}
+
+	return &first.Result[0], nil
+}
+
+// ---------------------------------------------------------------------------
+//  GetWithSubjects
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyRepo) GetWithSubjects(ctx context.Context, id surrealmodels.RecordID) (*models.Specialty, []models.RequiredSubject, error) {
+	// 1. Получаем саму специальность.
+	spec, err := r.GetByID(ctx, id)
+	if err != nil {
+		return nil, nil, fmt.Errorf("specialty.GetWithSubjects: %w", err)
+	}
+
+	// 2. Графовый запрос: все связи requires для этой специальности с
+	//    развёрнутыми объектами предметов ЕНТ (FETCH out).
+	//
+	//    SELECT * FROM requires WHERE in = $spec_id FETCH out
+	//
+	//    FETCH out заменяет RecordID в поле `out` на полный
+	//    объект subject, что маппится в RequiredSubject.Out.
+	subjectResults, err := surrealdb.Query[[]models.RequiredSubject](
+		ctx, r.db,
+		"SELECT * FROM requires WHERE in = $spec_id ORDER BY priority ASC FETCH out",
+		map[string]any{"spec_id": id},
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("specialty.GetWithSubjects: requires query: %w", err)
+	}
+
+	var subjects []models.RequiredSubject
+	if len(*subjectResults) > 0 {
+		first := (*subjectResults)[0]
+		if first.Error != nil {
+			return nil, nil, fmt.Errorf("specialty.GetWithSubjects: requires: %w", first.Error)
+		}
+		subjects = first.Result
+	}
+
+	if subjects == nil {
+		subjects = []models.RequiredSubject{}
+	}
+
+	return spec, subjects, nil
+}
+
+// ---------------------------------------------------------------------------
+//  Create
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyRepo) Create(ctx context.Context, s models.Specialty) (*models.Specialty, error) {
+	data := map[string]any{
+		"code": s.Code,
+		"name": map[string]any{
+			"kz": s.Name.KZ,
+			"ru": s.Name.RU,
+			"en": s.Name.EN,
+		},
+		"group": s.Group,
+	}
+
+	result, err := surrealdb.Create[models.Specialty](ctx, r.db, surrealmodels.Table("specialty"), data)
+	if err != nil {
+		return nil, fmt.Errorf("specialty.Create: %w", err)
+	}
+
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+//  Update
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyRepo) Update(ctx context.Context, id surrealmodels.RecordID, s models.Specialty) (*models.Specialty, error) {
+	data := map[string]any{
+		"code": s.Code,
+		"name": map[string]any{
+			"kz": s.Name.KZ,
+			"ru": s.Name.RU,
+			"en": s.Name.EN,
+		},
+		"group": s.Group,
+	}
+
+	result, err := surrealdb.Merge[models.Specialty](ctx, r.db, id, data)
+	if err != nil {
+		return nil, fmt.Errorf("specialty.Update: %w", err)
+	}
+
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+//  Delete
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error {
+	if _, err := surrealdb.Delete[models.Specialty](ctx, r.db, id); err != nil {
+		return fmt.Errorf("specialty.Delete: %w", err)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+//  CreateRequires  (specialty ──requires──▶ subject)
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyRepo) CreateRequires(
+	ctx context.Context,
+	specialtyID, subjectID surrealmodels.RecordID,
+	input models.CreateRequiresInput,
+) (*models.Requires, error) {
+	rel := &surrealdb.Relationship{
+		In:       specialtyID,
+		Out:      subjectID,
+		Relation: surrealmodels.Table("requires"),
+		Data: map[string]any{
+			"priority": int(input.Priority),
+		},
+	}
+
+	result, err := surrealdb.Relate[models.Requires](ctx, r.db, rel)
+	if err != nil {
+		return nil, fmt.Errorf("specialty.CreateRequires: %w", err)
+	}
+
+	return result, nil
+}
