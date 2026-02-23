@@ -1,0 +1,34 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build output
+/tmp/
+build-errors.log
+
+# Test binary
+*.test
+
+# Go coverage
+*.out
+*.prof
+
+# Dependency directories
+/vendor/
+
+# Environment variables
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

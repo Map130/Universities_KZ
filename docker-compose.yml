@@ -1,0 +1,26 @@
+services:
+  # Наша база данных будущего
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    container_name: universities_db
+    ports:
+      - "8000:8000"
+    command: start --log debug --user ${SURREAL_USER} --pass ${SURREAL_PASS} memory # Для начала в памяти, потом прикрутишь volume
+    restart: always
+
+  # S3 хранилище для логотипов
+  minio:
+    image: minio/minio:latest
+    container_name: universities_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    restart: always
+
+volumes:
+  caddy_data:
+  caddy_config:
