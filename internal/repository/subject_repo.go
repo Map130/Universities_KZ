@@ -154,18 +154,6 @@ func (r *surrealSubjectRepo) FindUniversitiesBySubject(ctx context.Context, subj
 	//    специальностей с одним и тем же предметом.
 	query := `
 		LET $spec_ids = (SELECT VALUE in FROM requires WHERE out = $subject_id);
-		SELECT DISTINCT VALUE in FROM offers WHERE out IN $spec_ids
-			FETCH in;
-	`
-
-	// Запрос возвращает два результата (LET + SELECT).
-	// Нас интересует второй — массив вузов.
-	//
-	// Однако FETCH in разворачивает RecordID в полный объект university,
-	// но SELECT VALUE in уже извлекает значение, и FETCH применяется к нему.
-	// Более надёжный подход — стандартный SELECT с FETCH:
-	query = `
-		LET $spec_ids = (SELECT VALUE in FROM requires WHERE out = $subject_id);
 		LET $uni_ids  = array::distinct((SELECT VALUE in FROM offers WHERE out IN $spec_ids));
 		SELECT * FROM university WHERE id IN $uni_ids ORDER BY name.ru ASC;
 	`
