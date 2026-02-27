@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/models"
 	"github.com/Map130/universities/internal/repository"
+	"github.com/Map130/universities/internal/storage"
 )
 
 func requireEnv(key string) string {
@@ -35,6 +37,15 @@ func main() {
 	}
 	appPort := requireEnv("APP_PORT")
 
+	// ── MinIO config ────────────────────────────────────────
+	minioCfg := storage.Config{
+		Endpoint:       requireEnv("MINIO_ENDPOINT"), // например "localhost:9000"
+		AccessKey:      requireEnv("MINIO_ROOT_USER"),
+		SecretKey:      requireEnv("MINIO_ROOT_PASSWORD"),
+		UseSSL:         os.Getenv("MINIO_USE_SSL") == "true",
+		PublicEndpoint: requireEnv("MINIO_PUBLIC_URL"), // например "http://localhost:9000"
+	}
+
 	ctx := context.Background()
 
 	surrealDB, err := db.Connect(ctx, cfg)
@@ -44,6 +55,12 @@ func main() {
 
 	if err := db.RunMigrations(ctx, surrealDB); err != nil {
 		log.Fatalf("Ошибка миграции схемы: %v", err)
+	}
+
+	// ── Инициализация MinIO storage ─────────────────────────
+	store, err := storage.NewMinioStorage(ctx, minioCfg)
+	if err != nil {
+		log.Fatalf("Ошибка подключения к MinIO: %v", err)
 	}
 
 	// Инициализация репозиториев
@@ -124,6 +141,55 @@ func main() {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
 		return c.JSON(subjects)
+	})
+
+	// ── Upload logo ─────────────────────────────────────────
+	v1.Post("/universities/:id/logo", func(c *fiber.Ctx) error {
+		// 1. Парсим ID вуза.
+		id, err := parseRecordID("university", c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		// 2. Проверяем, что вуз существует.
+		uni, err := uniRepo.GetByID(c.Context(), id)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "university not found"})
+		}
+
+		// 3. Извлекаем файл из multipart-формы.
+		file, err := c.FormFile("logo")
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing 'logo' file in form"})
+		}
+
+		// 4. Загружаем изображение в MinIO.
+		logoURL, err := store.UploadImage(c.Context(), file)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		// 5. Удаляем старый логотип, если был.
+		if uni.LogoURL != nil && *uni.LogoURL != "" {
+			oldFileName := path.Base(*uni.LogoURL)
+			// Ошибку удаления логируем, но не блокируем запрос.
+			if delErr := store.DeleteFile(c.Context(), storage.BucketLogos, oldFileName); delErr != nil {
+				log.Printf("[upload] warning: failed to delete old logo %s: %v", oldFileName, delErr)
+			}
+		}
+
+		// 6. Обновляем logo_url в базе данных.
+		uni.LogoURL = &logoURL
+		updated, err := uniRepo.Update(c.Context(), id, *uni)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("logo uploaded but DB update failed: %v", err)})
+		}
+
+		return c.JSON(fiber.Map{
+			"message":    "logo uploaded successfully",
+			"logo_url":   logoURL,
+			"university": updated,
+		})
 	})
 
 	// ── Graceful Shutdown ───────────────────────────────────
