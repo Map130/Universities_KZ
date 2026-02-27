@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/Map130/universities/internal/auth"
 	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/models"
 	"github.com/Map130/universities/internal/repository"
@@ -68,8 +69,21 @@ func main() {
 	groupRepo := repository.NewSpecialtyGroupRepository(surrealDB)
 	specRepo := repository.NewSpecialtyRepository(surrealDB)
 	subjectRepo := repository.NewSubjectRepository(surrealDB)
+	adminRepo := repository.NewAdminRepository(surrealDB)
 
 	log.Println("[app] repositories initialized")
+
+	// ── Google OAuth 2.0 ────────────────────────────────────
+	authCfg, err := auth.LoadConfigFromEnv()
+	if err != nil {
+		log.Fatalf("Ошибка загрузки OAuth-конфигурации: %v", err)
+	}
+	auth.InitGothProviders(authCfg)
+
+	sessionStore := auth.NewSessionStore(authCfg.SessionSecret)
+	authHandlers := auth.NewHandlers(sessionStore, adminRepo)
+
+	log.Println("[app] Google OAuth initialized")
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Universities KZ v1.0",
@@ -79,6 +93,20 @@ func main() {
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "online", "db": "connected"})
+	})
+
+	// ── Auth routes (публичные) ─────────────────────────────
+	authHandlers.RegisterRoutes(app)
+
+	// ── Admin routes (защищены AuthRequired) ────────────────
+	admin := app.Group("/admin", auth.AuthRequired(sessionStore))
+
+	admin.Get("/", func(c *fiber.Ctx) error {
+		adminInfo := auth.GetAdminFromLocals(c)
+		return c.JSON(fiber.Map{
+			"message": "Welcome to admin panel",
+			"admin":   adminInfo,
+		})
 	})
 
 	v1 := app.Group("/api/v1")
