@@ -333,7 +333,7 @@ DEFINE TABLE OVERWRITE allowed_admins SCHEMAFULL
 
 -- Email администратора (уникальный, нижний регистр) --
 DEFINE FIELD OVERWRITE email          ON TABLE allowed_admins TYPE string
-    ASSERT string::is::email($value);
+    ASSERT string::is_email($value);
 
 -- Имя администратора (необязательное, для удобства идентификации) --
 DEFINE FIELD OVERWRITE name           ON TABLE allowed_admins TYPE option<string>;
