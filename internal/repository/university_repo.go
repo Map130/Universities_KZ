@@ -217,6 +217,9 @@ func (r *surrealUniversityRepo) Create(ctx context.Context, u models.University)
 		data["description"] = *u.Description
 	}
 
+	// Кастомный CSS для премиум-вузов (всегда передаём, DEFAULT "" в схеме).
+	data["custom_css"] = u.CustomCSS
+
 	result, err := surrealdb.Create[models.University](ctx, r.db, surrealmodels.Table("university"), data)
 	if err != nil {
 		return nil, fmt.Errorf("university.Create: %w", err)
@@ -250,6 +253,9 @@ func (r *surrealUniversityRepo) Update(ctx context.Context, id surrealmodels.Rec
 	if u.Description != nil {
 		data["description"] = *u.Description
 	}
+
+	// Кастомный CSS для премиум-вузов.
+	data["custom_css"] = u.CustomCSS
 
 	result, err := surrealdb.Merge[models.University](ctx, r.db, id, data)
 	if err != nil {

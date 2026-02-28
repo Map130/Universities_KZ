@@ -50,6 +50,13 @@ DEFINE FIELD OVERWRITE website        ON TABLE university TYPE option<string>;
 -- Свободное описание --
 DEFINE FIELD OVERWRITE description    ON TABLE university TYPE option<string>;
 
+-- Кастомный CSS для премиум-вузов.
+-- Хранит произвольный CSS, который инжектится на публичной странице вуза
+-- внутри изолированного контейнера (см. комментарии по безопасности в хендлерах).
+-- По умолчанию — пустая строка (не premium).
+DEFINE FIELD OVERWRITE custom_css     ON TABLE university TYPE string
+    DEFAULT "";
+
 -- Временные метки --
 DEFINE FIELD OVERWRITE created_at     ON TABLE university TYPE datetime
     DEFAULT time::now();

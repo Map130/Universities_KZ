@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/Map130/universities/internal/admin"
 	"github.com/Map130/universities/internal/auth"
 	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/models"
@@ -98,16 +99,22 @@ func main() {
 	// ── Auth routes (публичные) ─────────────────────────────
 	authHandlers.RegisterRoutes(app)
 
-	// ── Admin routes (защищены AuthRequired) ────────────────
-	admin := app.Group("/admin", auth.AuthRequired(sessionStore))
+	// ── Admin Panel (HTML, HTMX, Tailwind) ──────────────────
+	// Setup регистрирует все /admin/* маршруты с AuthRequired middleware.
+	// Renderer использует html/template с layout + фрагментами для HTMX.
+	adminRenderer := admin.Setup(app, admin.Config{
+		ViewsDir: "./views",
+		DevMode:  os.Getenv("APP_ENV") != "production", // hot reload шаблонов в dev
+	}, sessionStore, uniRepo, store)
 
-	admin.Get("/", func(c *fiber.Ctx) error {
-		adminInfo := auth.GetAdminFromLocals(c)
-		return c.JSON(fiber.Map{
-			"message": "Welcome to admin panel",
-			"admin":   adminInfo,
-		})
-	})
+	// В production режиме прогреваем кэш шаблонов при старте.
+	if os.Getenv("APP_ENV") == "production" {
+		if err := adminRenderer.WalkTemplates(); err != nil {
+			log.Printf("[app] warning: template pre-cache error: %v", err)
+		}
+	}
+
+	log.Println("[app] admin panel initialized at /admin")
 
 	v1 := app.Group("/api/v1")
 
