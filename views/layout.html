@@ -1,0 +1,407 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .Title}}{{.Title}} — {{end}}Админ-панель | UniversitiesKZ</title>
+
+    <!-- Tailwind CSS (CDN — только для dev-режима).
+         В production заменить на собранный CSS через Tailwind CLI. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX — декларативный AJAX для HTML.
+         Graceful Degradation: все формы имеют action/method,
+         поэтому работают и без HTMX (как обычный HTML POST). -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"
+            integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+            crossorigin="anonymous"></script>
+
+    <!-- Стили для code-editor textarea (custom_css поле) -->
+    <style>
+        .code-editor {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            tab-size: 2;
+            resize: vertical;
+        }
+        /* Скрываем toast после анимации */
+        .toast-enter {
+            animation: toast-in 0.3s ease-out forwards;
+        }
+        .toast-exit {
+            animation: toast-out 0.5s ease-in forwards;
+        }
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(-1rem); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toast-out {
+            from { opacity: 1; transform: translateY(0); }
+            to   { opacity: 0; transform: translateY(-1rem); }
+        }
+    </style>
+</head>
+<body class="h-full"
+      hx-boost="true"
+      hx-target="#main-content"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      hx-indicator="#page-loader">
+
+    <div class="min-h-full flex">
+
+        <!-- ════════════════════════════════════════════════════════
+             SIDEBAR — боковое меню навигации
+             ════════════════════════════════════════════════════════ -->
+        <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0">
+            <div class="flex flex-col flex-grow bg-indigo-800 overflow-y-auto">
+
+                <!-- Логотип / Название проекта -->
+                <div class="flex items-center flex-shrink-0 px-4 py-5 border-b border-indigo-700">
+                    <a href="/admin" class="flex items-center space-x-3 no-underline">
+                        <div class="flex-shrink-0 w-9 h-9 bg-white rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-indigo-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 14l9-5-9-5-9 5 9 5z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/>
+                            </svg>
+                        </div>
+                        <span class="text-white font-bold text-lg tracking-tight">UniversitiesKZ</span>
+                    </a>
+                </div>
+
+                <!-- Навигация -->
+                <nav class="flex-1 px-3 py-4 space-y-1">
+                    <!-- Dashboard -->
+                    <a href="/admin"
+                       hx-get="/admin"
+                       hx-target="#main-content"
+                       class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150 {{activeClass .ActiveNav "dashboard"}}">
+                        <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        Дашборд
+                    </a>
+
+                    <!-- Вузы -->
+                    <a href="/admin/universities"
+                       hx-get="/admin/universities"
+                       hx-target="#main-content"
+                       class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150 {{activeClass .ActiveNav "universities"}}">
+                        <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                        Вузы
+                    </a>
+
+                    <!-- Специальности -->
+                    <a href="/admin/specialties"
+                       hx-get="/admin/specialties"
+                       hx-target="#main-content"
+                       class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150 {{activeClass .ActiveNav "specialties"}}">
+                        <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        Специальности
+                    </a>
+
+                    <!-- Группы ОП -->
+                    <a href="/admin/groups"
+                       hx-get="/admin/groups"
+                       hx-target="#main-content"
+                       class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150 {{activeClass .ActiveNav "groups"}}">
+                        <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        Группы ОП
+                    </a>
+
+                    <!-- Предметы ЕНТ -->
+                    <a href="/admin/subjects"
+                       hx-get="/admin/subjects"
+                       hx-target="#main-content"
+                       class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150 {{activeClass .ActiveNav "subjects"}}">
+                        <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                        Предметы ЕНТ
+                    </a>
+
+                    <!-- Разделитель -->
+                    <div class="border-t border-indigo-700 my-3"></div>
+
+                    <!-- Администраторы -->
+                    <a href="/admin/admins"
+                       hx-get="/admin/admins"
+                       hx-target="#main-content"
+                       class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150 {{activeClass .ActiveNav "admins"}}">
+                        <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                        Администраторы
+                    </a>
+                </nav>
+
+                <!-- Версия -->
+                <div class="flex-shrink-0 px-4 py-3 border-t border-indigo-700">
+                    <p class="text-xs text-indigo-300">UniversitiesKZ v1.0</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ════════════════════════════════════════════════════════
+             MAIN AREA — Header + Content
+             ════════════════════════════════════════════════════════ -->
+        <div class="lg:pl-64 flex flex-col flex-1 min-h-screen">
+
+            <!-- HEADER -->
+            <header class="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+
+                    <!-- Левая часть: мобильное меню + индикатор загрузки -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Мобильная кнопка меню (TODO: реализовать mobile sidebar) -->
+                        <button type="button"
+                                class="lg:hidden -ml-0.5 -mt-0.5 inline-flex items-center justify-center h-10 w-10 rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                                onclick="document.getElementById('mobile-sidebar').classList.toggle('hidden')">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            </svg>
+                        </button>
+
+                        <!-- HTMX loading indicator -->
+                        <div id="page-loader" class="htmx-indicator flex items-center space-x-2">
+                            <svg class="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="text-sm text-gray-500">Загрузка...</span>
+                        </div>
+                    </div>
+
+                    <!-- Правая часть: информация об админе + Logout -->
+                    <div class="flex items-center space-x-4">
+                        {{if .Admin.Email}}
+                        <div class="flex items-center space-x-3">
+                            <!-- Аватар -->
+                            {{if .Admin.AvatarURL}}
+                            <img src="{{.Admin.AvatarURL}}"
+                                 alt="{{.Admin.Name}}"
+                                 class="h-8 w-8 rounded-full ring-2 ring-gray-200"
+                                 referrerpolicy="no-referrer">
+                            {{else}}
+                            <div class="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center">
+                                <span class="text-sm font-medium text-white">
+                                    {{if .Admin.Name}}{{truncate 1 .Admin.Name}}{{else}}A{{end}}
+                                </span>
+                            </div>
+                            {{end}}
+
+                            <!-- Имя и email -->
+                            <div class="hidden sm:block text-right">
+                                <p class="text-sm font-medium text-gray-900 leading-tight">
+                                    {{default "Администратор" .Admin.Name}}
+                                </p>
+                                <p class="text-xs text-gray-500 leading-tight">
+                                    {{.Admin.Email}}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Кнопка Logout -->
+                        <form action="/auth/logout" method="POST" class="inline">
+                            <button type="submit"
+                                    hx-post="/auth/logout"
+                                    hx-boost="false"
+                                    class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150">
+                                <svg class="mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                </svg>
+                                Выйти
+                            </button>
+                        </form>
+                        {{end}}
+                    </div>
+                </div>
+            </header>
+
+            <!-- ════════════════════════════════════════════════════
+                 TOAST NOTIFICATIONS CONTAINER
+                 Сюда HTMX может вставлять уведомления через hx-swap-oob
+                 ════════════════════════════════════════════════════ -->
+            <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-2 w-80">
+                {{if .Flash}}
+                <div class="toast-enter rounded-lg p-4 shadow-lg border
+                    {{if eq .Flash.Type "success"}}bg-emerald-50 border-emerald-200 text-emerald-800{{end}}
+                    {{if eq .Flash.Type "error"}}bg-red-50 border-red-200 text-red-800{{end}}
+                    {{if eq .Flash.Type "warning"}}bg-amber-50 border-amber-200 text-amber-800{{end}}
+                    {{if eq .Flash.Type "info"}}bg-blue-50 border-blue-200 text-blue-800{{end}}"
+                    onclick="this.classList.add('toast-exit'); setTimeout(() => this.remove(), 500)">
+                    <div class="flex items-start">
+                        {{if eq .Flash.Type "success"}}
+                        <svg class="h-5 w-5 mr-2 mt-0.5 flex-shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {{end}}
+                        {{if eq .Flash.Type "error"}}
+                        <svg class="h-5 w-5 mr-2 mt-0.5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {{end}}
+                        <p class="text-sm font-medium">{{.Flash.Message}}</p>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+
+            <!-- ════════════════════════════════════════════════════
+                 MAIN CONTENT AREA
+                 Этот блок подменяется HTMX при навигации.
+                 При обычном запросе — рендерится через {{template "content" .}}
+                 ════════════════════════════════════════════════════ -->
+            <main id="main-content" class="flex-1">
+                {{template "content" .}}
+            </main>
+
+            <!-- FOOTER -->
+            <footer class="border-t border-gray-200 bg-white">
+                <div class="px-4 sm:px-6 lg:px-8 py-4">
+                    <p class="text-xs text-gray-400 text-center">
+                        &copy; 2025 UniversitiesKZ — Система управления данными вузов Казахстана
+                    </p>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         MOBILE SIDEBAR (скрыт по умолчанию)
+         ════════════════════════════════════════════════════════ -->
+    <div id="mobile-sidebar" class="hidden fixed inset-0 z-40 lg:hidden">
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75"
+             onclick="document.getElementById('mobile-sidebar').classList.add('hidden')"></div>
+
+        <!-- Sidebar panel -->
+        <div class="relative flex-1 flex flex-col max-w-xs w-full bg-indigo-800">
+            <div class="absolute top-0 right-0 -mr-12 pt-2">
+                <button type="button"
+                        class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                        onclick="document.getElementById('mobile-sidebar').classList.add('hidden')">
+                    <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Логотип -->
+            <div class="flex items-center flex-shrink-0 px-4 py-5 border-b border-indigo-700">
+                <a href="/admin" class="flex items-center space-x-3 no-underline">
+                    <div class="flex-shrink-0 w-9 h-9 bg-white rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-indigo-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/>
+                        </svg>
+                    </div>
+                    <span class="text-white font-bold text-lg">UniversitiesKZ</span>
+                </a>
+            </div>
+
+            <!-- Мобильная навигация -->
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                <a href="/admin"
+                   onclick="document.getElementById('mobile-sidebar').classList.add('hidden')"
+                   class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg {{activeClass .ActiveNav "dashboard"}}">
+                    <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    Дашборд
+                </a>
+                <a href="/admin/universities"
+                   onclick="document.getElementById('mobile-sidebar').classList.add('hidden')"
+                   class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg {{activeClass .ActiveNav "universities"}}">
+                    <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    Вузы
+                </a>
+                <a href="/admin/specialties"
+                   onclick="document.getElementById('mobile-sidebar').classList.add('hidden')"
+                   class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg {{activeClass .ActiveNav "specialties"}}">
+                    <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    Специальности
+                </a>
+                <a href="/admin/groups"
+                   onclick="document.getElementById('mobile-sidebar').classList.add('hidden')"
+                   class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg {{activeClass .ActiveNav "groups"}}">
+                    <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    Группы ОП
+                </a>
+                <a href="/admin/subjects"
+                   onclick="document.getElementById('mobile-sidebar').classList.add('hidden')"
+                   class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg {{activeClass .ActiveNav "subjects"}}">
+                    <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                    </svg>
+                    Предметы ЕНТ
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         HTMX конфигурация и обработка ошибок
+         ════════════════════════════════════════════════════════ -->
+    <script>
+        // Автоматически скрываем toast через 5 секунд.
+        document.addEventListener('htmx:load', function() {
+            document.querySelectorAll('.toast-enter').forEach(function(el) {
+                setTimeout(function() {
+                    el.classList.remove('toast-enter');
+                    el.classList.add('toast-exit');
+                    setTimeout(function() { el.remove(); }, 500);
+                }, 5000);
+            });
+        });
+
+        // Обработка ошибок HTMX (сеть, 500 и т.д.)
+        document.addEventListener('htmx:responseError', function(evt) {
+            var container = document.getElementById('toast-container');
+            if (container) {
+                var toast = document.createElement('div');
+                toast.className = 'toast-enter rounded-lg p-4 shadow-lg border bg-red-50 border-red-200 text-red-800';
+                toast.innerHTML = '<div class="flex items-start">' +
+                    '<svg class="h-5 w-5 mr-2 mt-0.5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>' +
+                    '</svg>' +
+                    '<p class="text-sm font-medium">Ошибка сервера. Попробуйте ещё раз.</p>' +
+                    '</div>';
+                container.appendChild(toast);
+                setTimeout(function() {
+                    toast.classList.remove('toast-enter');
+                    toast.classList.add('toast-exit');
+                    setTimeout(function() { toast.remove(); }, 500);
+                }, 5000);
+            }
+        });
+    </script>
+
+</body>
+</html>
+{{end}}
