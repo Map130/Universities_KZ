@@ -6,9 +6,12 @@ import (
 	"log"
 	"os"
 	"os/signal"
+
 	"path"
 	"syscall"
 	"time"
+
+	"github.com/gofiber/fiber/v2/middleware/session"
 
 	"github.com/gofiber/fiber/v2"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
@@ -75,16 +78,23 @@ func main() {
 	log.Println("[app] repositories initialized")
 
 	// ── Google OAuth 2.0 ────────────────────────────────────
-	authCfg, err := auth.LoadConfigFromEnv()
-	if err != nil {
-		log.Fatalf("Ошибка загрузки OAuth-конфигурации: %v", err)
+	// При сборке с тегом noauth (go build -tags noauth) аутентификация
+	// полностью отключена: OAuth не инициализируется, сессия создаётся
+	// с фиктивным секретом, auth-роуты не регистрируются.
+	var sessionStore *session.Store
+
+	if auth.IsNoAuth() {
+		log.Println("[app] ⚠️  noauth build: skipping Google OAuth, using dummy session store")
+		sessionStore = auth.NewSessionStore("noauth-dev-secret")
+	} else {
+		authCfg, err := auth.LoadConfigFromEnv()
+		if err != nil {
+			log.Fatalf("Ошибка загрузки OAuth-конфигурации: %v", err)
+		}
+		auth.InitGothProviders(authCfg)
+		sessionStore = auth.NewSessionStore(authCfg.SessionSecret)
+		log.Println("[app] Google OAuth initialized")
 	}
-	auth.InitGothProviders(authCfg)
-
-	sessionStore := auth.NewSessionStore(authCfg.SessionSecret)
-	authHandlers := auth.NewHandlers(sessionStore, adminRepo)
-
-	log.Println("[app] Google OAuth initialized")
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Universities KZ v1.0",
@@ -92,12 +102,22 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	})
 
+	// ── Static files (CSS, JS, images) ──────────────────────
+	app.Static("/static", "./static", fiber.Static{
+		Compress:      true,
+		CacheDuration: 0, // В dev без кеша; в production выставить 24h+
+	})
+
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "online", "db": "connected"})
 	})
 
 	// ── Auth routes (публичные) ─────────────────────────────
-	authHandlers.RegisterRoutes(app)
+	// В noauth-билде OAuth-роуты не регистрируются (они не нужны).
+	if !auth.IsNoAuth() {
+		authHandlers := auth.NewHandlers(sessionStore, adminRepo)
+		authHandlers.RegisterRoutes(app)
+	}
 
 	// ── Admin Panel (HTML, HTMX, Tailwind) ──────────────────
 	// Setup регистрирует все /admin/* маршруты с AuthRequired middleware.

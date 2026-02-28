@@ -1,35 +1,75 @@
 #:schema https://json.schemastore.org/any.json
 
+# ─────────────────────────────────────────────────────────────
+#  Air — Live Reload для Go + Tailwind CSS
+#
+#  Что происходит при изменении файла:
+#    1. pre_cmd  → npx tailwindcss пересобирает CSS
+#    2. cmd      → go build компилирует бинарник
+#    3. bin      → запускается ./tmp/main
+#
+#  Tailwind watch НЕ нужен отдельно — air сам триггерит
+#  пересборку CSS при изменении .html / .go файлов.
+# ─────────────────────────────────────────────────────────────
+
 env_files = [".env"]
 root = "."
 testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  args_bin = []
+  # ── 1. Пересборка Tailwind CSS перед компиляцией Go ────────
+  pre_cmd = ["npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify"]
+
+  # ── 2. Компиляция Go (noauth для dev без Google OAuth) ─────
+  cmd = "go build -tags noauth -o ./tmp/main ./cmd/api"
+
+  # ── 3. Запуск бинарника ────────────────────────────────────
   bin = "./tmp/main"
-  cmd = "go build -o ./tmp/main ./cmd/api"
-  delay = 1000
-  entrypoint = ["./tmp/main"]
-  exclude_dir = ["assets", "tmp", "vendor", "testdata"]
-  exclude_file = []
-  exclude_regex = ["_test.go"]
-  exclude_unchanged = false
-  follow_symlink = false
+  args_bin = []
   full_bin = ""
+
+  # ── Какие директории отслеживать ───────────────────────────
+  # views   — HTML-шаблоны (layout, universities/*, stub)
+  # static  — CSS input, картинки, JS
+  # cmd     — main.go, точка входа
+  # internal— handlers, models, repo, auth, storage
+  # configs — конфиги (пока пусто, но пусть следит)
+  include_dir = ["cmd", "internal", "configs", "views", "static"]
+
+  # ── Какие расширения триггерят rebuild ─────────────────────
+  include_ext = ["go", "html", "css", "js", "tmpl", "tpl", "surql"]
+  include_file = ["tailwind.config.js"]
+
+  # ── Что исключить ─────────────────────────────────────────
+  # output.css — результат сборки Tailwind, не нужно зацикливаться
+  # node_modules — npm пакеты, не наш код
+  # tmp — артефакты билда air
+  # .git — понятно
+  exclude_dir = ["tmp", "vendor", "testdata", "node_modules", ".git"]
+  exclude_file = ["static/css/output.css"]
+  exclude_regex = ["_test\\.go$"]
+  exclude_unchanged = false
+
+  # ── Timing ─────────────────────────────────────────────────
+  # Задержка перед билдом после детекта изменений (мс).
+  # 500ms — достаточно чтобы IDE успел записать все файлы,
+  # но не слишком долго чтобы раздражать.
+  delay = 500
+  rerun = false
+  rerun_delay = 500
+
+  # ── Post-build (пусто, но можно добавить уведомления) ──────
+  post_cmd = []
+
+  # ── Misc ───────────────────────────────────────────────────
+  follow_symlink = false
   ignore_dangerous_root_dir = false
-  include_dir = ["cmd", "internal", "configs"]
-  include_ext = ["go", "tpl", "tmpl", "html"]
-  include_file = []
   kill_delay = "0s"
   log = "build-errors.log"
   poll = false
   poll_interval = 0
-  post_cmd = []
-  pre_cmd = []
-  rerun = false
-  rerun_delay = 500
-  send_interrupt = false
+  send_interrupt = true
   stop_on_error = false
 
 [color]
@@ -42,10 +82,10 @@ tmp_dir = "tmp"
 [log]
   main_only = false
   silent = false
-  time = false
+  time = true
 
 [misc]
-  clean_on_exit = false
+  clean_on_exit = true
 
 [proxy]
   app_port = 0
@@ -54,5 +94,5 @@ tmp_dir = "tmp"
   proxy_port = 0
 
 [screen]
-  clear_on_rebuild = false
+  clear_on_rebuild = true
   keep_scroll = true

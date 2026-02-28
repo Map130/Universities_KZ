@@ -17,7 +17,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/session"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
-	"github.com/Map130/universities/internal/auth"
 	"github.com/Map130/universities/internal/models"
 	"github.com/Map130/universities/internal/repository"
 	"github.com/Map130/universities/internal/storage"
@@ -521,15 +520,7 @@ func (h *Handlers) renderFormWithErrors(
 
 // adminData извлекает данные администратора из c.Locals (заполнены middleware).
 func (h *Handlers) adminData(c *fiber.Ctx) AdminData {
-	info := auth.GetAdminFromLocals(c)
-	if info == nil {
-		return AdminData{}
-	}
-	return AdminData{
-		Email:     info.Email,
-		Name:      info.Name,
-		AvatarURL: info.AvatarURL,
-	}
+	return adminDataFromLocals(c)
 }
 
 // redirectToListWithFlash выполняет редирект на список вузов.

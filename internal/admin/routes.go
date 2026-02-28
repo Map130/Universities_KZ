@@ -24,6 +24,8 @@ type Config struct {
 //
 // Все маршруты /admin/* защищены middleware auth.AuthRequired, который
 // проверяет наличие активной сессии администратора.
+// При сборке с тегом `noauth` аутентификация отключена — используется
+// NoAuthMiddleware, подставляющий фейковые данные администратора.
 //
 // Параметры:
 //   - app:          Fiber application instance.
@@ -46,8 +48,19 @@ func Setup(
 	// ── Admin Handlers ──────────────────────────────────────
 	uniHandlers := NewHandlers(uniRepo, sessionStore, uploader, renderer)
 
-	// ── Admin Route Group (защищён AuthRequired) ────────────
-	admin := app.Group("/admin", auth.AuthRequired(sessionStore))
+	// ── Auth Middleware ──────────────────────────────────────
+	// При сборке с тегом noauth используется middleware без проверки
+	// аутентификации (фейковые данные админа в Locals).
+	// В обычном (production) билде — полноценный auth.AuthRequired.
+	var authMiddleware fiber.Handler
+	if auth.IsNoAuth() {
+		authMiddleware = auth.NoAuthMiddleware()
+	} else {
+		authMiddleware = auth.AuthRequired(sessionStore)
+	}
+
+	// ── Admin Route Group (защищён AuthRequired или NoAuth) ─
+	admin := app.Group("/admin", authMiddleware)
 
 	// Dashboard (заглушка — рендерит список вузов пока нет дашборда).
 	admin.Get("/", func(c *fiber.Ctx) error {
@@ -66,5 +79,66 @@ func Setup(
 	uniGroup := admin.Group("/universities")
 	uniHandlers.RegisterRoutes(uniGroup)
 
+	// ── Stub routes (разделы в разработке) ──────────────────
+	// Каждый раздел sidebar должен отдавать страницу, а не 404.
+	// По мере реализации — заменяем stub на полноценный handler.
+
+	type stubContent struct {
+		Title       string
+		Description string
+	}
+
+	stubHandler := func(title, description, navKey string) fiber.Handler {
+		return func(c *fiber.Ctx) error {
+			return renderer.RenderPage(c, "stub.html", PageData{
+				Title:     title,
+				Admin:     adminDataFromLocals(c),
+				ActiveNav: navKey,
+				Content: stubContent{
+					Title:       title,
+					Description: description,
+				},
+			})
+		}
+	}
+
+	admin.Get("/specialties", stubHandler(
+		"Специальности",
+		"Управление образовательными программами и специальностями вузов. Этот раздел сейчас в разработке.",
+		"specialties",
+	))
+
+	admin.Get("/groups", stubHandler(
+		"Группы ОП",
+		"Управление группами образовательных программ и требованиями к предметам ЕНТ. Этот раздел сейчас в разработке.",
+		"groups",
+	))
+
+	admin.Get("/subjects", stubHandler(
+		"Предметы ЕНТ",
+		"Управление списком предметов Единого национального тестирования. Этот раздел сейчас в разработке.",
+		"subjects",
+	))
+
+	admin.Get("/admins", stubHandler(
+		"Администраторы",
+		"Управление whitelist-ом email-адресов администраторов с доступом через Google OAuth. Этот раздел сейчас в разработке.",
+		"admins",
+	))
+
 	return renderer
+}
+
+// adminDataFromLocals извлекает данные админа из c.Locals (заполняются middleware).
+// Вынесено из Handlers, чтобы использовать и в stub-хендлерах.
+func adminDataFromLocals(c *fiber.Ctx) AdminData {
+	info := auth.GetAdminFromLocals(c)
+	if info == nil {
+		return AdminData{}
+	}
+	return AdminData{
+		Email:     info.Email,
+		Name:      info.Name,
+		AvatarURL: info.AvatarURL,
+	}
 }

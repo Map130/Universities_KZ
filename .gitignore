@@ -9,6 +9,15 @@
 /tmp/
 build-errors.log
 
+# Node / Tailwind
+node_modules/
+static/css/output.css
+
+# Tailwind standalone binary (если скачивали вручную)
+/tailwindcss
+/tailwindcss-linux-*
+
+
 # Test binary
 *.test
 
