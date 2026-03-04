@@ -197,11 +197,17 @@ func (r *surrealSpecialtyGroupRepo) Create(ctx context.Context, g models.Special
 		"name": map[string]any{"kz": g.Name.KZ, "ru": g.Name.RU, "en": g.Name.EN},
 	}
 
-	result, err := surrealdb.Create[models.SpecialtyGroup](ctx, r.db, surrealmodels.Table("specialty_group"), data)
+	// SurrealDB возвращает массив при CREATE на таблицу (Table),
+	// даже если создаётся одна запись. Десериализуем как []models.SpecialtyGroup.
+	result, err := surrealdb.Create[[]models.SpecialtyGroup](ctx, r.db, surrealmodels.Table("specialty_group"), data)
 	if err != nil {
 		return nil, fmt.Errorf("specialtyGroup.Create: %w", err)
 	}
-	return result, nil
+	if result == nil || len(*result) == 0 {
+		return nil, fmt.Errorf("specialtyGroup.Create: empty result from DB")
+	}
+	created := (*result)[0]
+	return &created, nil
 }
 
 // ---------------------------------------------------------------------------

@@ -206,11 +206,17 @@ func (r *surrealSpecialtyRepo) Create(ctx context.Context, s models.Specialty) (
 		"group": s.Group, // RecordID → specialty_group:...
 	}
 
-	result, err := surrealdb.Create[models.Specialty](ctx, r.db, surrealmodels.Table("specialty"), data)
+	// SurrealDB возвращает массив при CREATE на таблицу (Table),
+	// даже если создаётся одна запись. Десериализуем как []models.Specialty.
+	result, err := surrealdb.Create[[]models.Specialty](ctx, r.db, surrealmodels.Table("specialty"), data)
 	if err != nil {
 		return nil, fmt.Errorf("specialty.Create: %w", err)
 	}
-	return result, nil
+	if result == nil || len(*result) == 0 {
+		return nil, fmt.Errorf("specialty.Create: empty result from DB")
+	}
+	created := (*result)[0]
+	return &created, nil
 }
 
 // ---------------------------------------------------------------------------

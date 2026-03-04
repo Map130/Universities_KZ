@@ -220,12 +220,19 @@ func (r *surrealUniversityRepo) Create(ctx context.Context, u models.University)
 	// Кастомный CSS для премиум-вузов (всегда передаём, DEFAULT "" в схеме).
 	data["custom_css"] = u.CustomCSS
 
-	result, err := surrealdb.Create[models.University](ctx, r.db, surrealmodels.Table("university"), data)
+	// SurrealDB возвращает массив при CREATE на таблицу (Table),
+	// даже если создаётся одна запись. Поэтому десериализуем как []models.University
+	// и берём первый элемент.
+	result, err := surrealdb.Create[[]models.University](ctx, r.db, surrealmodels.Table("university"), data)
 	if err != nil {
 		return nil, fmt.Errorf("university.Create: %w", err)
 	}
+	if result == nil || len(*result) == 0 {
+		return nil, fmt.Errorf("university.Create: empty result from DB")
+	}
 
-	return result, nil
+	created := (*result)[0]
+	return &created, nil
 }
 
 // ---------------------------------------------------------------------------
