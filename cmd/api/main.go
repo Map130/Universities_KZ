@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/session"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/Map130/universities/internal/admin"
@@ -102,10 +103,19 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	})
 
+	// ── Gzip/Deflate сжатие (on-the-fly, без файлового кэша) ─
+	// Fiber middleware compress сжимает ответы на лету.
+	// В отличие от fiber.Static{Compress: true}, который создаёт
+	// .fiber.gz файлы рядом с оригиналами и НЕ обновляет их при
+	// пересборке Tailwind → браузер получает устаревший CSS.
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelDefault,
+	}))
+
 	// ── Static files (CSS, JS, images) ──────────────────────
 	app.Static("/static", "./static", fiber.Static{
-		Compress:      true,
-		CacheDuration: 0, // В dev без кеша; в production выставить 24h+
+		Compress:      false, // сжатие через middleware выше, без stale .fiber.gz
+		CacheDuration: 0,     // В dev без кеша; в production выставить 24h+
 	})
 
 	app.Get("/health", func(c *fiber.Ctx) error {

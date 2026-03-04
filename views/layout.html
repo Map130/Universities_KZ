@@ -6,42 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{if .Title}}{{.Title}} — {{end}}Админ-панель | UniversitiesKZ</title>
 
-    <!-- Tailwind CSS (CDN — только для dev-режима).
-         В production заменить на собранный CSS через Tailwind CLI. -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS — собранный через Tailwind CLI (npx tailwindcss).
+         Билд:   npm run css:build   (minified, для production)
+         Watch:  npm run css:watch   (hot rebuild при изменении шаблонов)
+         Dev:    air сам запускает сборку через pre_cmd в .air.toml -->
+    <link rel="stylesheet" href="/static/css/output.css">
 
-    <!-- HTMX — декларативный AJAX для HTML.
+    <!-- HTMX 2.0.4 — декларативный AJAX для HTML.
+         Файл лежит локально в static/js/ (скачан с unpkg.com).
          Graceful Degradation: все формы имеют action/method,
          поэтому работают и без HTMX (как обычный HTML POST). -->
-    <script src="https://unpkg.com/htmx.org@2.0.4"
-            integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
-            crossorigin="anonymous"></script>
-
-    <!-- Стили для code-editor textarea (custom_css поле) -->
-    <style>
-        .code-editor {
-            font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
-            font-size: 0.875rem;
-            line-height: 1.5;
-            tab-size: 2;
-            resize: vertical;
-        }
-        /* Скрываем toast после анимации */
-        .toast-enter {
-            animation: toast-in 0.3s ease-out forwards;
-        }
-        .toast-exit {
-            animation: toast-out 0.5s ease-in forwards;
-        }
-        @keyframes toast-in {
-            from { opacity: 0; transform: translateY(-1rem); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes toast-out {
-            from { opacity: 1; transform: translateY(0); }
-            to   { opacity: 0; transform: translateY(-1rem); }
-        }
-    </style>
+    <script src="/static/js/htmx.min.js"></script>
 </head>
 <body class="h-full"
       hx-boost="true"
@@ -52,9 +27,6 @@
 
     <div class="min-h-full flex">
 
-        <!-- ════════════════════════════════════════════════════════
-             SIDEBAR — боковое меню навигации
-             ════════════════════════════════════════════════════════ -->
         <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0">
             <div class="flex flex-col flex-grow bg-indigo-800 overflow-y-auto">
 
@@ -160,9 +132,6 @@
             </div>
         </aside>
 
-        <!-- ════════════════════════════════════════════════════════
-             MAIN AREA — Header + Content
-             ════════════════════════════════════════════════════════ -->
         <div class="lg:pl-64 flex flex-col flex-1 min-h-screen">
 
             <!-- HEADER -->
@@ -237,10 +206,6 @@
                 </div>
             </header>
 
-            <!-- ════════════════════════════════════════════════════
-                 TOAST NOTIFICATIONS CONTAINER
-                 Сюда HTMX может вставлять уведомления через hx-swap-oob
-                 ════════════════════════════════════════════════════ -->
             <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-2 w-80">
                 {{if .Flash}}
                 <div class="toast-enter rounded-lg p-4 shadow-lg border
@@ -266,11 +231,7 @@
                 {{end}}
             </div>
 
-            <!-- ════════════════════════════════════════════════════
-                 MAIN CONTENT AREA
-                 Этот блок подменяется HTMX при навигации.
-                 При обычном запросе — рендерится через {{template "content" .}}
-                 ════════════════════════════════════════════════════ -->
+
             <main id="main-content" class="flex-1">
                 {{template "content" .}}
             </main>
@@ -286,9 +247,7 @@
         </div>
     </div>
 
-    <!-- ════════════════════════════════════════════════════════
-         MOBILE SIDEBAR (скрыт по умолчанию)
-         ════════════════════════════════════════════════════════ -->
+
     <div id="mobile-sidebar" class="hidden fixed inset-0 z-40 lg:hidden">
         <!-- Overlay -->
         <div class="fixed inset-0 bg-gray-600 bg-opacity-75"
@@ -365,9 +324,7 @@
         </div>
     </div>
 
-    <!-- ════════════════════════════════════════════════════════
-         HTMX конфигурация и обработка ошибок
-         ════════════════════════════════════════════════════════ -->
+
     <script>
         // Автоматически скрываем toast через 5 секунд.
         document.addEventListener('htmx:load', function() {

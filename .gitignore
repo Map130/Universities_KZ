@@ -13,6 +13,9 @@ build-errors.log
 node_modules/
 static/css/output.css
 
+# Fiber pre-compressed static cache (auto-generated, becomes stale)
+*.fiber.gz
+
 # Tailwind standalone binary (если скачивали вручную)
 /tailwindcss
 /tailwindcss-linux-*

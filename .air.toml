@@ -19,7 +19,7 @@ tmp_dir = "tmp"
 
 [build]
   # ── 1. Пересборка Tailwind CSS перед компиляцией Go ────────
-  pre_cmd = ["npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify"]
+  pre_cmd = ["find ./static -name '*.fiber.gz' -delete", "npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify"]
 
   # ── 2. Компиляция Go (noauth для dev без Google OAuth) ─────
   cmd = "go build -tags noauth -o ./tmp/main ./cmd/api"
