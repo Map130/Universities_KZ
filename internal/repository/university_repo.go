@@ -38,6 +38,15 @@ type UniversityRepository interface {
 	// CreateOffer создаёт графовую связь university -> specialty
 	// с данными о грантах и стоимости обучения.
 	CreateOffer(ctx context.Context, universityID, specialtyID surrealmodels.RecordID, input models.CreateOfferInput) (*models.Offers, error)
+
+	// UpdateOffer обновляет данные существующей связи offers по её ID.
+	UpdateOffer(ctx context.Context, id surrealmodels.RecordID, input models.CreateOfferInput) (*models.Offers, error)
+
+	// DeleteOffer удаляет графовую связь offers по её ID.
+	DeleteOffer(ctx context.Context, id surrealmodels.RecordID) error
+
+	// DeleteAllOffers удаляет все связи offers для данного вуза.
+	DeleteAllOffers(ctx context.Context, universityID surrealmodels.RecordID) error
 }
 
 // surrealUniversityRepo — реализация UniversityRepository поверх SurrealDB.
@@ -311,4 +320,55 @@ func (r *surrealUniversityRepo) CreateOffer(
 	}
 
 	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+//  UpdateOffer  (обновление данных связи offers)
+// ---------------------------------------------------------------------------
+
+func (r *surrealUniversityRepo) UpdateOffer(
+	ctx context.Context,
+	id surrealmodels.RecordID,
+	input models.CreateOfferInput,
+) (*models.Offers, error) {
+	data := map[string]any{
+		"grant_count":         input.GrantCount,
+		"quota_grant_count":   input.QuotaGrantCount,
+		"tuition_fee":         input.TuitionFee,
+		"min_score":           input.MinScore,
+		"last_year_threshold": input.LastYearThreshold,
+	}
+
+	result, err := surrealdb.Merge[models.Offers](ctx, r.db, id, data)
+	if err != nil {
+		return nil, fmt.Errorf("university.UpdateOffer: %w", err)
+	}
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+//  DeleteOffer  (удаление одной связи offers по ID)
+// ---------------------------------------------------------------------------
+
+func (r *surrealUniversityRepo) DeleteOffer(ctx context.Context, id surrealmodels.RecordID) error {
+	if _, err := surrealdb.Delete[models.Offers](ctx, r.db, id); err != nil {
+		return fmt.Errorf("university.DeleteOffer: %w", err)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+//  DeleteAllOffers  (удаление всех связей offers для вуза)
+// ---------------------------------------------------------------------------
+
+func (r *surrealUniversityRepo) DeleteAllOffers(ctx context.Context, universityID surrealmodels.RecordID) error {
+	_, err := surrealdb.Query[any](
+		ctx, r.db,
+		"DELETE FROM offers WHERE in = $uni_id",
+		map[string]any{"uni_id": universityID},
+	)
+	if err != nil {
+		return fmt.Errorf("university.DeleteAllOffers: %w", err)
+	}
+	return nil
 }

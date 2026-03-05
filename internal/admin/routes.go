@@ -52,7 +52,7 @@ func Setup(
 	renderer := NewRenderer(cfg.ViewsDir, cfg.DevMode)
 
 	// ── Admin Handlers ──────────────────────────────────────
-	uniHandlers := NewHandlers(uniRepo, sessionStore, uploader, renderer)
+	uniHandlers := NewHandlers(uniRepo, specRepo, sessionStore, uploader, renderer)
 	specHandlers := NewSpecialtyHandlers(specRepo, groupRepo, sessionStore, renderer)
 	groupHandlers := NewGroupHandlers(groupRepo, subjectRepo, sessionStore, renderer)
 	subjectHandlers := NewSubjectHandlers(subjectRepo, sessionStore, renderer)

@@ -426,7 +426,34 @@ func defaultFuncMap() template.FuncMap {
 		"eqStr": func(a, b string) bool {
 			return a == b
 		},
+
+		// formatNumber форматирует целое число с разделителем разрядов (пробел).
+		// Например: 1500000 → "1 500 000". Используется для отображения
+		// стоимости обучения и других числовых значений в UI.
+		"formatNumber": func(n int) string {
+			if n < 0 {
+				return "-" + formatNumberImpl(-n)
+			}
+			return formatNumberImpl(n)
+		},
 	}
+}
+
+// formatNumberImpl форматирует неотрицательное число с пробелами-разделителями.
+func formatNumberImpl(n int) string {
+	s := fmt.Sprintf("%d", n)
+	if len(s) <= 3 {
+		return s
+	}
+	// Вставляем пробелы справа налево каждые 3 символа.
+	var result []byte
+	for i, ch := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			result = append(result, ' ')
+		}
+		result = append(result, byte(ch))
+	}
+	return string(result)
 }
 
 // ────────────────────────────────────────────────────────────────────────────

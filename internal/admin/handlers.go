@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,6 +30,7 @@ import (
 // Handlers объединяет зависимости для HTTP-хендлеров админ-панели.
 type Handlers struct {
 	uniRepo  repository.UniversityRepository
+	specRepo repository.SpecialtyRepository
 	store    *session.Store
 	storage  storage.Uploader
 	renderer *Renderer
@@ -42,12 +44,14 @@ type Handlers struct {
 //   - renderer: движок шаблонов (html/template с layout).
 func NewHandlers(
 	uniRepo repository.UniversityRepository,
+	specRepo repository.SpecialtyRepository,
 	store *session.Store,
 	uploader storage.Uploader,
 	renderer *Renderer,
 ) *Handlers {
 	return &Handlers{
 		uniRepo:  uniRepo,
+		specRepo: specRepo,
 		store:    store,
 		storage:  uploader,
 		renderer: renderer,
@@ -78,6 +82,12 @@ func (h *Handlers) RegisterRoutes(group fiber.Router) {
 	group.Put("/:id", h.Update)
 	group.Post("/:id", h.UpdatePost) // Graceful Degradation: POST + _method=PUT
 	group.Delete("/:id", h.Delete)
+
+	// ── Offers (связки специальностей) ───────────────────────
+	group.Post("/:id/offers", h.AddOffer)
+	group.Put("/:id/offers/:offer_id", h.UpdateOffer)
+	group.Post("/:id/offers/:offer_id", h.UpdateOfferPost) // Graceful Degradation
+	group.Delete("/:id/offers/:offer_id", h.DeleteOffer)
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -165,6 +175,12 @@ type UniversityFormData struct {
 
 	// University — данные вуза (заполненные или пустые для новой записи).
 	University models.University
+
+	// AllSpecialties — все специальности для dropdown при добавлении offer.
+	AllSpecialties []models.Specialty
+
+	// Offers — текущие связи вуза со специальностями (offers edges).
+	Offers []models.OfferWithSpecialty
 }
 
 // New рендерит пустую форму для создания нового вуза.
@@ -176,9 +192,11 @@ func (h *Handlers) New(c *fiber.Ctx) error {
 		Admin:     h.adminData(c),
 		ActiveNav: "universities",
 		Content: UniversityFormData{
-			IsEdit:     false,
-			RecordID:   "",
-			University: models.University{},
+			IsEdit:         false,
+			RecordID:       "",
+			University:     models.University{},
+			AllSpecialties: []models.Specialty{},
+			Offers:         []models.OfferWithSpecialty{},
 		},
 	})
 }
@@ -242,20 +260,36 @@ func (h *Handlers) Edit(c *fiber.Ctx) error {
 	id := c.Params("id")
 	recordID := surrealmodels.NewRecordID("university", id)
 
-	uni, err := h.uniRepo.GetByID(c.Context(), recordID)
+	detail, err := h.uniRepo.GetWithSpecialties(c.Context(), recordID)
 	if err != nil {
-		log.Printf("[admin/universities] Edit: GetByID(%s) error: %v", id, err)
+		log.Printf("[admin/universities] Edit: GetWithSpecialties(%s) error: %v", id, err)
 		return h.redirectToListWithFlash(c, "error", "Вуз не найден")
 	}
 
+	allSpecs := h.loadAllSpecialties(c)
+
+	// Flash-сообщения из query-параметров (например, после добавления offer).
+	var flash *FlashMessage
+	if flashType := c.Query("flash"); flashType != "" {
+		if flashMsg := c.Query("flash_msg"); flashMsg != "" {
+			flash = &FlashMessage{
+				Type:    flashType,
+				Message: flashMsg,
+			}
+		}
+	}
+
 	return h.renderer.RenderPage(c, "universities/form.html", PageData{
-		Title:     fmt.Sprintf("Редактирование — %s", uni.Name.RU),
+		Title:     fmt.Sprintf("Редактирование — %s", detail.University.Name.RU),
 		Admin:     h.adminData(c),
 		ActiveNav: "universities",
+		Flash:     flash,
 		Content: UniversityFormData{
-			IsEdit:     true,
-			RecordID:   id,
-			University: *uni,
+			IsEdit:         true,
+			RecordID:       id,
+			University:     detail.University,
+			AllSpecialties: allSpecs,
+			Offers:         detail.Offers,
 		},
 	})
 }
@@ -366,6 +400,12 @@ func (h *Handlers) Delete(c *fiber.Ctx) error {
 		}
 	}
 
+	// Удаляем все связи offers перед удалением вуза.
+	if err := h.uniRepo.DeleteAllOffers(c.Context(), recordID); err != nil {
+		log.Printf("[admin/universities] Delete: DeleteAllOffers(%s) error: %v", id, err)
+		// Продолжаем удаление вуза — ошибка не критична.
+	}
+
 	// Удаляем запись из базы данных.
 	if err := h.uniRepo.Delete(c.Context(), recordID); err != nil {
 		log.Printf("[admin/universities] Delete: DB error: %v", err)
@@ -383,6 +423,164 @@ func (h *Handlers) Delete(c *fiber.Ctx) error {
 	}
 
 	return h.redirectToListWithFlash(c, "success", fmt.Sprintf("Вуз «%s» удалён", existing.Name.RU))
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  AddOffer — добавление связи вуза со специальностью
+// ────────────────────────────────────────────────────────────────────────────
+
+// AddOffer создаёт графовую связь university -> specialty.
+//
+//	POST /admin/universities/:id/offers
+//
+// Form fields:
+//   - specialty_id:       строковый ID специальности
+//   - grant_count:        количество грантов
+//   - quota_grant_count:  количество грантов по сельской квоте
+//   - tuition_fee:        стоимость обучения (тенге/год)
+//   - min_score:          минимальный балл ЕНТ
+//   - last_year_threshold: проходной балл прошлого года
+func (h *Handlers) AddOffer(c *fiber.Ctx) error {
+	id := c.Params("id")
+	uniRecordID := surrealmodels.NewRecordID("university", id)
+
+	// Проверяем существование вуза.
+	_, err := h.uniRepo.GetByID(c.Context(), uniRecordID)
+	if err != nil {
+		log.Printf("[admin/universities] AddOffer: university %s not found: %v", id, err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusNotFound).SendString("Вуз не найден")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Вуз не найден")
+	}
+
+	specIDStr := strings.TrimSpace(c.FormValue("specialty_id"))
+	if specIDStr == "" {
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusUnprocessableEntity).SendString("Выберите специальность")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Выберите специальность")
+	}
+
+	offerInput, offerErrs := h.parseOfferForm(c)
+	if len(offerErrs) > 0 {
+		// Собираем первую ошибку для flash.
+		var firstErr string
+		for _, v := range offerErrs {
+			firstErr = v
+			break
+		}
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusUnprocessableEntity).SendString(firstErr)
+		}
+		return h.redirectToEditWithFlash(c, id, "error", firstErr)
+	}
+
+	specRecordID := surrealmodels.NewRecordID("specialty", specIDStr)
+
+	// Проверяем существование специальности.
+	spec, err := h.specRepo.GetByID(c.Context(), specRecordID)
+	if err != nil {
+		log.Printf("[admin/universities] AddOffer: specialty %s not found: %v", specIDStr, err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusNotFound).SendString("Специальность не найдена")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Специальность не найдена")
+	}
+
+	_, err = h.uniRepo.CreateOffer(c.Context(), uniRecordID, specRecordID, offerInput)
+	if err != nil {
+		log.Printf("[admin/universities] AddOffer: DB error: %v", err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusInternalServerError).SendString("Ошибка при создании связи")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Ошибка при создании связи со специальностью")
+	}
+
+	log.Printf("[admin/universities] AddOffer: uni=%s spec=%s (%s)", id, specIDStr, spec.Name.RU)
+
+	return h.redirectToEditWithFlash(c, id, "success",
+		fmt.Sprintf("Специальность «%s — %s» привязана к вузу", spec.Code, spec.Name.RU))
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  UpdateOffer — обновление данных связи вуза со специальностью
+// ────────────────────────────────────────────────────────────────────────────
+
+// UpdateOffer обновляет данные графовой связи offers.
+//
+//	PUT /admin/universities/:id/offers/:offer_id
+func (h *Handlers) UpdateOffer(c *fiber.Ctx) error {
+	id := c.Params("id")
+	offerID := c.Params("offer_id")
+	offerRecordID := surrealmodels.NewRecordID("offers", offerID)
+
+	offerInput, offerErrs := h.parseOfferForm(c)
+	if len(offerErrs) > 0 {
+		var firstErr string
+		for _, v := range offerErrs {
+			firstErr = v
+			break
+		}
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusUnprocessableEntity).SendString(firstErr)
+		}
+		return h.redirectToEditWithFlash(c, id, "error", firstErr)
+	}
+
+	_, err := h.uniRepo.UpdateOffer(c.Context(), offerRecordID, offerInput)
+	if err != nil {
+		log.Printf("[admin/universities] UpdateOffer: DB error: %v", err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusInternalServerError).SendString("Ошибка при обновлении связи")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Ошибка при обновлении данных специальности")
+	}
+
+	log.Printf("[admin/universities] UpdateOffer: uni=%s offer=%s updated", id, offerID)
+
+	return h.redirectToEditWithFlash(c, id, "success", "Данные специальности обновлены")
+}
+
+// UpdateOfferPost обрабатывает POST с _method=PUT для Graceful Degradation.
+//
+//	POST /admin/universities/:id/offers/:offer_id
+func (h *Handlers) UpdateOfferPost(c *fiber.Ctx) error {
+	method := strings.ToUpper(c.FormValue("_method"))
+	if method == "PUT" {
+		return h.UpdateOffer(c)
+	}
+	return c.Status(fiber.StatusMethodNotAllowed).SendString("Method Not Allowed")
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  DeleteOffer — удаление связи вуза со специальностью
+// ────────────────────────────────────────────────────────────────────────────
+
+// DeleteOffer удаляет графовую связь offers.
+//
+//	DELETE /admin/universities/:id/offers/:offer_id
+func (h *Handlers) DeleteOffer(c *fiber.Ctx) error {
+	id := c.Params("id")
+	offerID := c.Params("offer_id")
+	offerRecordID := surrealmodels.NewRecordID("offers", offerID)
+
+	if err := h.uniRepo.DeleteOffer(c.Context(), offerRecordID); err != nil {
+		log.Printf("[admin/universities] DeleteOffer: DB error: %v", err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusInternalServerError).SendString("Ошибка удаления связи")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Ошибка при удалении связи со специальностью")
+	}
+
+	log.Printf("[admin/universities] DeleteOffer: uni=%s offer=%s deleted", id, offerID)
+
+	if isHTMXRequest(c) {
+		// Возвращаем пустую строку — HTMX удалит строку из таблицы (hx-swap="outerHTML").
+		return c.SendString("")
+	}
+
+	return h.redirectToEditWithFlash(c, id, "success", "Связь со специальностью удалена")
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -500,6 +698,21 @@ func (h *Handlers) renderFormWithErrors(
 		title = fmt.Sprintf("Редактирование — %s", uni.Name.RU)
 	}
 
+	allSpecs := h.loadAllSpecialties(c)
+
+	// Загружаем текущие offers (если редактирование).
+	var offers []models.OfferWithSpecialty
+	if isEdit && recordID != "" {
+		uniRecordID := surrealmodels.NewRecordID("university", recordID)
+		detail, err := h.uniRepo.GetWithSpecialties(c.Context(), uniRecordID)
+		if err != nil {
+			log.Printf("[admin/universities] renderFormWithErrors: GetWithSpecialties error: %v", err)
+			offers = []models.OfferWithSpecialty{}
+		} else {
+			offers = detail.Offers
+		}
+	}
+
 	// Устанавливаем HTTP 422 (Unprocessable Entity) для ошибок валидации.
 	// HTMX по умолчанию не свопает контент при 4xx/5xx ошибках,
 	// но мы настроили hx-target, поэтому ответ корректно отобразится.
@@ -511,9 +724,11 @@ func (h *Handlers) renderFormWithErrors(
 		ActiveNav: "universities",
 		Errors:    errs,
 		Content: UniversityFormData{
-			IsEdit:     isEdit,
-			RecordID:   recordID,
-			University: uni,
+			IsEdit:         isEdit,
+			RecordID:       recordID,
+			University:     uni,
+			AllSpecialties: allSpecs,
+			Offers:         offers,
 		},
 	})
 }
@@ -535,4 +750,93 @@ func (h *Handlers) redirectToListWithFlash(c *fiber.Ctx, flashType, message stri
 		url.QueryEscape(message),
 	)
 	return HTMXRedirect(c, redirectURL)
+}
+
+// redirectToEditWithFlash выполняет редирект на форму редактирования вуза с flash-сообщением.
+func (h *Handlers) redirectToEditWithFlash(c *fiber.Ctx, id, flashType, message string) error {
+	redirectURL := fmt.Sprintf("/admin/universities/%s/edit?flash=%s&flash_msg=%s",
+		id,
+		url.QueryEscape(flashType),
+		url.QueryEscape(message),
+	)
+	return HTMXRedirect(c, redirectURL)
+}
+
+// loadAllSpecialties загружает все специальности (для select-dropdown).
+func (h *Handlers) loadAllSpecialties(c *fiber.Ctx) []models.Specialty {
+	specs, err := h.specRepo.GetAll(c.Context(), models.SpecialtyFilters{
+		Lang:  "ru",
+		Limit: 500,
+	})
+	if err != nil {
+		log.Printf("[admin/universities] loadAllSpecialties: GetAll error: %v", err)
+		return []models.Specialty{}
+	}
+	return specs
+}
+
+// parseOfferForm извлекает и валидирует данные формы offer.
+// Возвращает CreateOfferInput и map ошибок.
+func (h *Handlers) parseOfferForm(c *fiber.Ctx) (models.CreateOfferInput, map[string]string) {
+	errs := make(map[string]string)
+
+	grantCountStr := strings.TrimSpace(c.FormValue("grant_count"))
+	quotaGrantCountStr := strings.TrimSpace(c.FormValue("quota_grant_count"))
+	tuitionFeeStr := strings.TrimSpace(c.FormValue("tuition_fee"))
+	minScoreStr := strings.TrimSpace(c.FormValue("min_score"))
+	lastYearThresholdStr := strings.TrimSpace(c.FormValue("last_year_threshold"))
+
+	var input models.CreateOfferInput
+
+	if grantCountStr == "" {
+		grantCountStr = "0"
+	}
+	grantCount, err := strconv.Atoi(grantCountStr)
+	if err != nil || grantCount < 0 {
+		errs["grant_count"] = "Количество грантов должно быть неотрицательным целым числом"
+	} else {
+		input.GrantCount = grantCount
+	}
+
+	if quotaGrantCountStr == "" {
+		quotaGrantCountStr = "0"
+	}
+	quotaGrantCount, err := strconv.Atoi(quotaGrantCountStr)
+	if err != nil || quotaGrantCount < 0 {
+		errs["quota_grant_count"] = "Количество грантов по квоте должно быть неотрицательным целым числом"
+	} else {
+		input.QuotaGrantCount = quotaGrantCount
+	}
+
+	if tuitionFeeStr == "" {
+		tuitionFeeStr = "0"
+	}
+	tuitionFee, err := strconv.Atoi(tuitionFeeStr)
+	if err != nil || tuitionFee < 0 {
+		errs["tuition_fee"] = "Стоимость обучения должна быть неотрицательным целым числом"
+	} else {
+		input.TuitionFee = tuitionFee
+	}
+
+	if minScoreStr == "" {
+		minScoreStr = "0"
+	}
+	minScore, err := strconv.Atoi(minScoreStr)
+	if err != nil || minScore < 0 || minScore > 140 {
+		errs["min_score"] = "Минимальный балл ЕНТ должен быть от 0 до 140"
+	} else {
+		input.MinScore = minScore
+	}
+
+	if lastYearThresholdStr == "" {
+		lastYearThresholdStr = "0"
+	}
+	lastYearThreshold, err := strconv.Atoi(lastYearThresholdStr)
+	if err != nil || lastYearThreshold < 0 || lastYearThreshold > 140 {
+		errs["last_year_threshold"] = "Проходной балл прошлого года должен быть от 0 до 140"
+	} else {
+		input.LastYearThreshold = lastYearThreshold
+	}
+
+	return input, errs
 }

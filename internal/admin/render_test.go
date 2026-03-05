@@ -13,6 +13,8 @@ import (
 func TestRenderFormNewUniversity(t *testing.T) {
 	r := NewRenderer("../../views", true)
 
+	specID := surrealmodels.NewRecordID("specialty", "spec1")
+
 	data := PageData{
 		Title:     "Новый вуз",
 		Admin:     AdminData{Email: "test@test.com", Name: "Test"},
@@ -21,6 +23,14 @@ func TestRenderFormNewUniversity(t *testing.T) {
 			IsEdit:     false,
 			RecordID:   "",
 			University: models.University{},
+			AllSpecialties: []models.Specialty{
+				{
+					ID:   &specID,
+					Code: "6B06101",
+					Name: models.LocalizedName{KZ: "Ақпараттық жүйелер", RU: "Информационные системы", EN: "Information Systems"},
+				},
+			},
+			Offers: []models.OfferWithSpecialty{},
 		},
 	}
 
@@ -54,6 +64,11 @@ func TestRenderFormEditUniversity(t *testing.T) {
 	description := "Один из ведущих вузов Казахстана"
 	logoURL := "http://localhost:9000/logos/test.png"
 
+	uniID := surrealmodels.NewRecordID("university", "abc123")
+	specID1 := surrealmodels.NewRecordID("specialty", "spec1")
+	specID2 := surrealmodels.NewRecordID("specialty", "spec2")
+	offerID1 := surrealmodels.NewRecordID("offers", "off1")
+
 	data := PageData{
 		Title:     "Редактирование вуза",
 		Admin:     AdminData{Email: "test@test.com", Name: "Test"},
@@ -62,6 +77,7 @@ func TestRenderFormEditUniversity(t *testing.T) {
 			IsEdit:   true,
 			RecordID: "abc123",
 			University: models.University{
+				ID: &uniID,
 				Name: models.LocalizedName{
 					KZ: "Әл-Фараби атындағы ҚазҰУ",
 					RU: "КазНУ им. аль-Фараби",
@@ -74,6 +90,34 @@ func TestRenderFormEditUniversity(t *testing.T) {
 				Website:     &website,
 				Description: &description,
 				CustomCSS:   ".hero { color: red; }",
+			},
+			AllSpecialties: []models.Specialty{
+				{
+					ID:   &specID1,
+					Code: "6B06101",
+					Name: models.LocalizedName{KZ: "Ақпараттық жүйелер", RU: "Информационные системы", EN: "Information Systems"},
+				},
+				{
+					ID:   &specID2,
+					Code: "6B07201",
+					Name: models.LocalizedName{KZ: "Электротехника", RU: "Электротехника", EN: "Electrical Engineering"},
+				},
+			},
+			Offers: []models.OfferWithSpecialty{
+				{
+					ID: &offerID1,
+					In: uniID,
+					Out: models.Specialty{
+						ID:   &specID1,
+						Code: "6B06101",
+						Name: models.LocalizedName{KZ: "Ақпараттық жүйелер", RU: "Информационные системы", EN: "Information Systems"},
+					},
+					GrantCount:        50,
+					QuotaGrantCount:   10,
+					TuitionFee:        1500000,
+					MinScore:          75,
+					LastYearThreshold: 82,
+				},
 			},
 		},
 	}
@@ -105,6 +149,8 @@ func TestRenderFormNilPointerFields(t *testing.T) {
 				Name: models.LocalizedName{RU: "Тест"},
 				Type: models.UniversityTypePrivate,
 			},
+			AllSpecialties: []models.Specialty{},
+			Offers:         []models.OfferWithSpecialty{},
 		},
 		Errors: map[string]string{
 			"name_ru": "Слишком короткое название",

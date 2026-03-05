@@ -458,6 +458,190 @@
             </div>
         </div>
     </form>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         SECTION 4: Специальности (offers edges)
+         Отображается только в режиме редактирования, т.к. для создания
+         связей нужен ID вуза.
+         ══════════════════════════════════════════════════════════════ -->
+    {{if .Content.IsEdit}}
+    <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <div class="flex items-center justify-between">
+                <h2 class="text-base font-semibold text-gray-900 flex items-center">
+                    <svg class="h-5 w-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    Специальности
+                </h2>
+                <span class="text-xs text-gray-400">
+                    Образовательные программы, предлагаемые вузом
+                </span>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Текущие связи -->
+            <div id="offers-list" class="mb-6">
+                {{if .Content.Offers}}
+                <div class="space-y-4">
+                    {{range .Content.Offers}}
+                    <div id="offer-row-{{recordID .ID}}" class="border border-gray-200 rounded-lg overflow-hidden">
+                        <!-- Заголовок offer -->
+                        <div class="px-4 py-3 bg-gray-50 flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-semibold text-gray-900">{{.Out.Code}}</span>
+                                <span class="text-sm text-gray-500 ml-2">{{.Out.Name.RU}}</span>
+                            </div>
+                            <button
+                                type="button"
+                                hx-delete="/admin/universities/{{$.Content.RecordID}}/offers/{{recordID .ID}}"
+                                hx-target="#offer-row-{{recordID .ID}}"
+                                hx-swap="outerHTML swap:0.3s"
+                                hx-confirm="Удалить связь со специальностью «{{.Out.Code}} — {{.Out.Name.RU}}»?"
+                                class="text-red-500 hover:text-red-700 transition-colors duration-150"
+                                title="Удалить связь"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- Форма редактирования данных offer -->
+                        <form action="/admin/universities/{{$.Content.RecordID}}/offers/{{recordID .ID}}"
+                              method="POST"
+                              hx-put="/admin/universities/{{$.Content.RecordID}}/offers/{{recordID .ID}}"
+                              hx-target="#main-content"
+                              hx-swap="innerHTML"
+                              class="px-4 py-4">
+                            <input type="hidden" name="_method" value="PUT">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1">Гранты</label>
+                                    <input type="number" name="grant_count" value="{{.GrantCount}}" min="0"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1">Гранты (сельская квота)</label>
+                                    <input type="number" name="quota_grant_count" value="{{.QuotaGrantCount}}" min="0"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1">Стоимость обучения (тг/год)</label>
+                                    <input type="number" name="tuition_fee" value="{{.TuitionFee}}" min="0"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1">Мин. балл ЕНТ (0–140)</label>
+                                    <input type="number" name="min_score" value="{{.MinScore}}" min="0" max="140"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1">Проходной балл (прош. год)</label>
+                                    <input type="number" name="last_year_threshold" value="{{.LastYearThreshold}}" min="0" max="140"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="submit"
+                                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150">
+                                        <svg class="-ml-1 mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        Обновить
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    {{end}}
+                </div>
+                {{else}}
+                <div class="text-center py-8 border border-dashed border-gray-300 rounded-lg mb-4">
+                    <svg class="mx-auto h-10 w-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    <p class="text-sm text-gray-500">Нет привязанных специальностей</p>
+                    <p class="text-xs text-gray-400 mt-1">Добавьте специальности через форму ниже</p>
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Форма добавления связи -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center">
+                    <svg class="h-4 w-4 text-gray-400 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Добавить специальность
+                </h3>
+                <form action="/admin/universities/{{.Content.RecordID}}/offers"
+                      method="POST"
+                      hx-post="/admin/universities/{{.Content.RecordID}}/offers"
+                      hx-target="#main-content"
+                      hx-swap="innerHTML"
+                      class="space-y-4">
+
+                    <!-- Specialty Select -->
+                    <div>
+                        <label for="specialty_id" class="block text-sm font-medium text-gray-700 mb-1">
+                            Специальность <span class="text-red-500">*</span>
+                        </label>
+                        <select name="specialty_id"
+                                id="specialty_id"
+                                class="block w-full py-2.5 pl-3 pr-10 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition-shadow duration-150"
+                                required>
+                            <option value="">— Выберите специальность —</option>
+                            {{range .Content.AllSpecialties}}
+                            <option value="{{recordID .ID}}">{{.Code}} — {{.Name.RU}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+
+                    <!-- Offer fields -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label for="new_grant_count" class="block text-xs font-medium text-gray-500 mb-1">Гранты</label>
+                            <input type="number" name="grant_count" id="new_grant_count" value="0" min="0"
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="new_quota_grant_count" class="block text-xs font-medium text-gray-500 mb-1">Гранты (сельская квота)</label>
+                            <input type="number" name="quota_grant_count" id="new_quota_grant_count" value="0" min="0"
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="new_tuition_fee" class="block text-xs font-medium text-gray-500 mb-1">Стоимость обучения (тг/год)</label>
+                            <input type="number" name="tuition_fee" id="new_tuition_fee" value="0" min="0"
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="new_min_score" class="block text-xs font-medium text-gray-500 mb-1">Мин. балл ЕНТ (0–140)</label>
+                            <input type="number" name="min_score" id="new_min_score" value="0" min="0" max="140"
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="new_last_year_threshold" class="block text-xs font-medium text-gray-500 mb-1">Проходной балл (прош. год)</label>
+                            <input type="number" name="last_year_threshold" id="new_last_year_threshold" value="0" min="0" max="140"
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-150">
+                                <svg class="-ml-1 mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                </svg>
+                                Привязать
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {{end}}
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════
