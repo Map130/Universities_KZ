@@ -95,11 +95,17 @@ type GroupFormData struct {
 	// Group — данные группы ОП (заполненные или пустые).
 	Group models.SpecialtyGroup
 
-	// AllSubjects — все доступные предметы ЕНТ (для dropdown при добавлении связи).
+	// AllSubjects — все доступные предметы ЕНТ (для dropdown).
 	AllSubjects []models.Subject
 
 	// RequiredSubjects — текущие связи группы с предметами ЕНТ (requires edges).
 	RequiredSubjects []models.RequiredSubject
+
+	// SelectedSubject1 — строковый ID первого выбранного предмета ЕНТ (для <select>).
+	SelectedSubject1 string
+
+	// SelectedSubject2 — строковый ID второго выбранного предмета ЕНТ (для <select>).
+	SelectedSubject2 string
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -168,6 +174,8 @@ func (h *GroupHandlers) New(c *fiber.Ctx) error {
 			Group:            models.SpecialtyGroup{},
 			AllSubjects:      allSubjects,
 			RequiredSubjects: []models.RequiredSubject{},
+			SelectedSubject1: "",
+			SelectedSubject2: "",
 		},
 	})
 }
@@ -180,27 +188,30 @@ func (h *GroupHandlers) New(c *fiber.Ctx) error {
 //
 //	POST /admin/groups
 func (h *GroupHandlers) Create(c *fiber.Ctx) error {
-	group, errs := h.parseGroupForm(c)
+	group, subj1, subj2, errs := h.parseGroupForm(c)
 	if len(errs) > 0 {
-		return h.renderFormWithErrors(c, false, "", group, errs)
+		return h.renderFormWithErrors(c, false, "", group, subj1, subj2, errs)
 	}
 
 	created, err := h.groupRepo.Create(c.Context(), group)
 	if err != nil {
 		log.Printf("[admin/groups] Create: DB error: %v", err)
 		errs["_global"] = "Ошибка при сохранении в базу данных. Попробуйте ещё раз."
-		return h.renderFormWithErrors(c, false, "", group, errs)
+		return h.renderFormWithErrors(c, false, "", group, subj1, subj2, errs)
 	}
 
 	log.Printf("[admin/groups] Created: %v (%s — %s)", created.ID, created.Code, created.Name.RU)
 
-	// После создания редиректим на форму редактирования, чтобы можно было
-	// сразу привязать предметы ЕНТ.
 	createdID := extractRecordIDValue(*created.ID)
+	groupRecordID := surrealmodels.NewRecordID("specialty_group", createdID)
+
+	// Привязываем предметы ЕНТ сразу при создании.
+	h.saveRequiresEdges(c, groupRecordID, subj1, subj2)
+
 	redirectURL := fmt.Sprintf("/admin/groups/%s/edit?flash=%s&flash_msg=%s",
 		createdID,
 		url.QueryEscape("success"),
-		url.QueryEscape(fmt.Sprintf("Группа ОП «%s — %s» успешно создана. Теперь привяжите предметы ЕНТ.", created.Code, created.Name.RU)),
+		url.QueryEscape(fmt.Sprintf("Группа ОП «%s — %s» успешно создана", created.Code, created.Name.RU)),
 	)
 	return HTMXRedirect(c, redirectURL)
 }
@@ -224,6 +235,9 @@ func (h *GroupHandlers) Edit(c *fiber.Ctx) error {
 
 	allSubjects := h.loadAllSubjects(c)
 
+	// Извлекаем текущие выбранные предметы из requires edges.
+	sel1, sel2 := h.extractSelectedSubjects(requiredSubjects)
+
 	// Flash-сообщения из query-параметров (например, после создания).
 	var flash *FlashMessage
 	if flashType := c.Query("flash"); flashType != "" {
@@ -246,6 +260,8 @@ func (h *GroupHandlers) Edit(c *fiber.Ctx) error {
 			Group:            *group,
 			AllSubjects:      allSubjects,
 			RequiredSubjects: requiredSubjects,
+			SelectedSubject1: sel1,
+			SelectedSubject2: sel2,
 		},
 	})
 }
@@ -268,19 +284,22 @@ func (h *GroupHandlers) Update(c *fiber.Ctx) error {
 		return h.redirectToListWithFlash(c, "error", "Группа ОП не найдена")
 	}
 
-	group, errs := h.parseGroupForm(c)
+	group, subj1, subj2, errs := h.parseGroupForm(c)
 	if len(errs) > 0 {
-		return h.renderFormWithErrors(c, true, id, group, errs)
+		return h.renderFormWithErrors(c, true, id, group, subj1, subj2, errs)
 	}
 
 	updated, err := h.groupRepo.Update(c.Context(), recordID, group)
 	if err != nil {
 		log.Printf("[admin/groups] Update: DB error: %v", err)
 		errs["_global"] = "Ошибка при обновлении в базе данных. Попробуйте ещё раз."
-		return h.renderFormWithErrors(c, true, id, group, errs)
+		return h.renderFormWithErrors(c, true, id, group, subj1, subj2, errs)
 	}
 
 	log.Printf("[admin/groups] Updated: %v (%s — %s)", updated.ID, updated.Code, updated.Name.RU)
+
+	// Пересоздаём связи requires (удаляем старые, создаём новые).
+	h.saveRequiresEdges(c, recordID, subj1, subj2)
 
 	redirectURL := fmt.Sprintf("/admin/groups/%s/edit?flash=%s&flash_msg=%s",
 		id,
@@ -459,13 +478,16 @@ func (h *GroupHandlers) DeleteRequires(c *fiber.Ctx) error {
 
 // parseGroupForm извлекает и валидирует данные формы группы ОП.
 // Возвращает модель SpecialtyGroup и map ошибок.
-func (h *GroupHandlers) parseGroupForm(c *fiber.Ctx) (models.SpecialtyGroup, map[string]string) {
+func (h *GroupHandlers) parseGroupForm(c *fiber.Ctx) (models.SpecialtyGroup, string, string, map[string]string) {
 	errs := make(map[string]string)
 
 	code := strings.TrimSpace(c.FormValue("code"))
 	nameRU := strings.TrimSpace(c.FormValue("name_ru"))
 	nameKZ := strings.TrimSpace(c.FormValue("name_kz"))
 	nameEN := strings.TrimSpace(c.FormValue("name_en"))
+
+	subject1 := strings.TrimSpace(c.FormValue("subject_1"))
+	subject2 := strings.TrimSpace(c.FormValue("subject_2"))
 
 	// Валидация обязательных полей.
 	if code == "" {
@@ -480,6 +502,15 @@ func (h *GroupHandlers) parseGroupForm(c *fiber.Ctx) (models.SpecialtyGroup, map
 	if nameEN == "" {
 		errs["name_en"] = "Название на английском обязательно"
 	}
+	if subject1 == "" {
+		errs["subject_1"] = "Выберите первый предмет ЕНТ"
+	}
+	if subject2 == "" {
+		errs["subject_2"] = "Выберите второй предмет ЕНТ"
+	}
+	if subject1 != "" && subject2 != "" && subject1 == subject2 {
+		errs["subject_2"] = "Предметы ЕНТ должны быть разными"
+	}
 
 	group := models.SpecialtyGroup{
 		Code: code,
@@ -490,7 +521,7 @@ func (h *GroupHandlers) parseGroupForm(c *fiber.Ctx) (models.SpecialtyGroup, map
 		},
 	}
 
-	return group, errs
+	return group, subject1, subject2, errs
 }
 
 // renderFormWithErrors рендерит форму с ошибками валидации.
@@ -499,6 +530,8 @@ func (h *GroupHandlers) renderFormWithErrors(
 	isEdit bool,
 	recordID string,
 	group models.SpecialtyGroup,
+	selectedSubject1 string,
+	selectedSubject2 string,
 	errs map[string]string,
 ) error {
 	title := "Новая группа ОП"
@@ -534,6 +567,8 @@ func (h *GroupHandlers) renderFormWithErrors(
 			Group:            group,
 			AllSubjects:      allSubjects,
 			RequiredSubjects: requiredSubjects,
+			SelectedSubject1: selectedSubject1,
+			SelectedSubject2: selectedSubject2,
 		},
 	})
 }
@@ -546,6 +581,54 @@ func (h *GroupHandlers) loadAllSubjects(c *fiber.Ctx) []models.Subject {
 		return []models.Subject{}
 	}
 	return subjects
+}
+
+// saveRequiresEdges удаляет все текущие связи requires и создаёт новые
+// для двух выбранных предметов ЕНТ.
+func (h *GroupHandlers) saveRequiresEdges(c *fiber.Ctx, groupID surrealmodels.RecordID, subj1, subj2 string) {
+	// Удаляем все существующие связи.
+	if err := h.groupRepo.DeleteAllRequires(c.Context(), groupID); err != nil {
+		log.Printf("[admin/groups] saveRequiresEdges: DeleteAllRequires error: %v", err)
+	}
+
+	// Создаём связь для первого предмета (priority=1).
+	if subj1 != "" {
+		subjectRecordID := surrealmodels.NewRecordID("subject", subj1)
+		if _, err := h.groupRepo.CreateRequires(c.Context(), groupID, subjectRecordID, models.CreateRequiresInput{
+			Priority: models.SubjectPriorityProfile,
+		}); err != nil {
+			log.Printf("[admin/groups] saveRequiresEdges: CreateRequires subject1 error: %v", err)
+		}
+	}
+
+	// Создаём связь для второго предмета (priority=2).
+	if subj2 != "" {
+		subjectRecordID := surrealmodels.NewRecordID("subject", subj2)
+		if _, err := h.groupRepo.CreateRequires(c.Context(), groupID, subjectRecordID, models.CreateRequiresInput{
+			Priority: models.SubjectPrioritySecondary,
+		}); err != nil {
+			log.Printf("[admin/groups] saveRequiresEdges: CreateRequires subject2 error: %v", err)
+		}
+	}
+}
+
+// extractSelectedSubjects извлекает строковые ID выбранных предметов из requires edges.
+// Возвращает (subject1_id, subject2_id) на основе приоритета.
+func (h *GroupHandlers) extractSelectedSubjects(reqs []models.RequiredSubject) (string, string) {
+	var sel1, sel2 string
+	for _, req := range reqs {
+		subjectID := ""
+		if req.Out.ID != nil {
+			subjectID = extractRecordIDValue(*req.Out.ID)
+		}
+		switch req.Priority {
+		case models.SubjectPriorityProfile:
+			sel1 = subjectID
+		case models.SubjectPrioritySecondary:
+			sel2 = subjectID
+		}
+	}
+	return sel1, sel2
 }
 
 // adminData извлекает данные администратора из c.Locals.

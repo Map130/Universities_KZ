@@ -419,6 +419,13 @@ func defaultFuncMap() template.FuncMap {
 				return "bg-gray-100 text-gray-800"
 			}
 		},
+
+		// eqStr сравнивает две строки. Используется в шаблонах для
+		// установки атрибута selected в <option>.
+		// Пример: {{if eqStr $currentID $optionID}}selected{{end}}
+		"eqStr": func(a, b string) bool {
+			return a == b
+		},
 	}
 }
 

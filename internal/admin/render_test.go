@@ -410,6 +410,8 @@ func TestRenderGroupFormNew(t *testing.T) {
 				},
 			},
 			RequiredSubjects: []models.RequiredSubject{},
+			SelectedSubject1: "",
+			SelectedSubject2: "",
 		},
 	}
 
@@ -484,6 +486,8 @@ func TestRenderGroupFormEdit(t *testing.T) {
 					Priority: models.SubjectPrioritySecondary,
 				},
 			},
+			SelectedSubject1: "math1",
+			SelectedSubject2: "phys1",
 		},
 	}
 
@@ -522,6 +526,8 @@ func TestRenderGroupFormEditEmpty(t *testing.T) {
 			},
 			AllSubjects:      []models.Subject{},
 			RequiredSubjects: []models.RequiredSubject{},
+			SelectedSubject1: "",
+			SelectedSubject2: "",
 		},
 	}
 
@@ -552,6 +558,8 @@ func TestRenderGroupFormWithErrors(t *testing.T) {
 			},
 			AllSubjects:      []models.Subject{},
 			RequiredSubjects: []models.RequiredSubject{},
+			SelectedSubject1: "",
+			SelectedSubject2: "",
 		},
 		Errors: map[string]string{
 			"code":    "Код группы ОП обязателен",
