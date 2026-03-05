@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,21 +22,24 @@ import (
 
 // GroupHandlers объединяет зависимости для HTTP-хендлеров групп ОП.
 type GroupHandlers struct {
-	groupRepo repository.SpecialtyGroupRepository
-	store     *session.Store
-	renderer  *Renderer
+	groupRepo   repository.SpecialtyGroupRepository
+	subjectRepo repository.SubjectRepository
+	store       *session.Store
+	renderer    *Renderer
 }
 
 // NewGroupHandlers создаёт набор хендлеров для управления группами ОП.
 func NewGroupHandlers(
 	groupRepo repository.SpecialtyGroupRepository,
+	subjectRepo repository.SubjectRepository,
 	store *session.Store,
 	renderer *Renderer,
 ) *GroupHandlers {
 	return &GroupHandlers{
-		groupRepo: groupRepo,
-		store:     store,
-		renderer:  renderer,
+		groupRepo:   groupRepo,
+		subjectRepo: subjectRepo,
+		store:       store,
+		renderer:    renderer,
 	}
 }
 
@@ -47,13 +51,15 @@ func NewGroupHandlers(
 //
 // Маршруты:
 //
-//	GET    /admin/groups            → список групп ОП
-//	GET    /admin/groups/new        → форма создания
-//	POST   /admin/groups            → создание группы ОП
-//	GET    /admin/groups/:id/edit   → форма редактирования
-//	PUT    /admin/groups/:id        → обновление группы ОП
-//	POST   /admin/groups/:id        → UpdatePost (graceful degradation)
-//	DELETE /admin/groups/:id        → удаление группы ОП
+//	GET    /admin/groups                          → список групп ОП
+//	GET    /admin/groups/new                      → форма создания
+//	POST   /admin/groups                          → создание группы ОП
+//	GET    /admin/groups/:id/edit                 → форма редактирования
+//	PUT    /admin/groups/:id                      → обновление группы ОП
+//	POST   /admin/groups/:id                      → UpdatePost (graceful degradation)
+//	DELETE /admin/groups/:id                      → удаление группы ОП
+//	POST   /admin/groups/:id/requires             → добавить связь с предметом
+//	DELETE /admin/groups/:id/requires/:requires_id → удалить связь с предметом
 func (h *GroupHandlers) RegisterRoutes(group fiber.Router) {
 	group.Get("/", h.Index)
 	group.Get("/new", h.New)
@@ -62,6 +68,10 @@ func (h *GroupHandlers) RegisterRoutes(group fiber.Router) {
 	group.Put("/:id", h.Update)
 	group.Post("/:id", h.UpdatePost)
 	group.Delete("/:id", h.Delete)
+
+	// ── Requires (связки предметов ЕНТ) ─────────────────────
+	group.Post("/:id/requires", h.AddRequires)
+	group.Delete("/:id/requires/:requires_id", h.DeleteRequires)
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -84,6 +94,12 @@ type GroupFormData struct {
 
 	// Group — данные группы ОП (заполненные или пустые).
 	Group models.SpecialtyGroup
+
+	// AllSubjects — все доступные предметы ЕНТ (для dropdown при добавлении связи).
+	AllSubjects []models.Subject
+
+	// RequiredSubjects — текущие связи группы с предметами ЕНТ (requires edges).
+	RequiredSubjects []models.RequiredSubject
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -140,14 +156,18 @@ func (h *GroupHandlers) Index(c *fiber.Ctx) error {
 //
 //	GET /admin/groups/new
 func (h *GroupHandlers) New(c *fiber.Ctx) error {
+	allSubjects := h.loadAllSubjects(c)
+
 	return h.renderer.RenderPage(c, "groups/form.html", PageData{
 		Title:     "Новая группа ОП",
 		Admin:     h.adminData(c),
 		ActiveNav: "groups",
 		Content: GroupFormData{
-			IsEdit:   false,
-			RecordID: "",
-			Group:    models.SpecialtyGroup{},
+			IsEdit:           false,
+			RecordID:         "",
+			Group:            models.SpecialtyGroup{},
+			AllSubjects:      allSubjects,
+			RequiredSubjects: []models.RequiredSubject{},
 		},
 	})
 }
@@ -174,8 +194,15 @@ func (h *GroupHandlers) Create(c *fiber.Ctx) error {
 
 	log.Printf("[admin/groups] Created: %v (%s — %s)", created.ID, created.Code, created.Name.RU)
 
-	return h.redirectToListWithFlash(c, "success",
-		fmt.Sprintf("Группа ОП «%s — %s» успешно создана", created.Code, created.Name.RU))
+	// После создания редиректим на форму редактирования, чтобы можно было
+	// сразу привязать предметы ЕНТ.
+	createdID := extractRecordIDValue(*created.ID)
+	redirectURL := fmt.Sprintf("/admin/groups/%s/edit?flash=%s&flash_msg=%s",
+		createdID,
+		url.QueryEscape("success"),
+		url.QueryEscape(fmt.Sprintf("Группа ОП «%s — %s» успешно создана. Теперь привяжите предметы ЕНТ.", created.Code, created.Name.RU)),
+	)
+	return HTMXRedirect(c, redirectURL)
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -189,20 +216,36 @@ func (h *GroupHandlers) Edit(c *fiber.Ctx) error {
 	id := c.Params("id")
 	recordID := surrealmodels.NewRecordID("specialty_group", id)
 
-	group, err := h.groupRepo.GetByID(c.Context(), recordID)
+	group, requiredSubjects, err := h.groupRepo.GetWithSubjects(c.Context(), recordID)
 	if err != nil {
-		log.Printf("[admin/groups] Edit: GetByID(%s) error: %v", id, err)
+		log.Printf("[admin/groups] Edit: GetWithSubjects(%s) error: %v", id, err)
 		return h.redirectToListWithFlash(c, "error", "Группа ОП не найдена")
+	}
+
+	allSubjects := h.loadAllSubjects(c)
+
+	// Flash-сообщения из query-параметров (например, после создания).
+	var flash *FlashMessage
+	if flashType := c.Query("flash"); flashType != "" {
+		if flashMsg := c.Query("flash_msg"); flashMsg != "" {
+			flash = &FlashMessage{
+				Type:    flashType,
+				Message: flashMsg,
+			}
+		}
 	}
 
 	return h.renderer.RenderPage(c, "groups/form.html", PageData{
 		Title:     fmt.Sprintf("Редактирование — %s", group.Code),
 		Admin:     h.adminData(c),
 		ActiveNav: "groups",
+		Flash:     flash,
 		Content: GroupFormData{
-			IsEdit:   true,
-			RecordID: id,
-			Group:    *group,
+			IsEdit:           true,
+			RecordID:         id,
+			Group:            *group,
+			AllSubjects:      allSubjects,
+			RequiredSubjects: requiredSubjects,
 		},
 	})
 }
@@ -239,8 +282,12 @@ func (h *GroupHandlers) Update(c *fiber.Ctx) error {
 
 	log.Printf("[admin/groups] Updated: %v (%s — %s)", updated.ID, updated.Code, updated.Name.RU)
 
-	return h.redirectToListWithFlash(c, "success",
-		fmt.Sprintf("Группа ОП «%s — %s» успешно обновлена", updated.Code, updated.Name.RU))
+	redirectURL := fmt.Sprintf("/admin/groups/%s/edit?flash=%s&flash_msg=%s",
+		id,
+		url.QueryEscape("success"),
+		url.QueryEscape(fmt.Sprintf("Группа ОП «%s — %s» успешно обновлена", updated.Code, updated.Name.RU)),
+	)
+	return HTMXRedirect(c, redirectURL)
 }
 
 // UpdatePost обрабатывает POST-запрос с _method=PUT (Graceful Degradation).
@@ -274,6 +321,12 @@ func (h *GroupHandlers) Delete(c *fiber.Ctx) error {
 		return h.redirectToListWithFlash(c, "error", "Группа ОП не найдена")
 	}
 
+	// Удаляем все связи requires перед удалением группы.
+	if err := h.groupRepo.DeleteAllRequires(c.Context(), recordID); err != nil {
+		log.Printf("[admin/groups] Delete: DeleteAllRequires(%s) error: %v", id, err)
+		// Продолжаем удаление группы — ошибка не критична.
+	}
+
 	if err := h.groupRepo.Delete(c.Context(), recordID); err != nil {
 		log.Printf("[admin/groups] Delete: DB error: %v", err)
 		if isHTMXRequest(c) {
@@ -290,6 +343,114 @@ func (h *GroupHandlers) Delete(c *fiber.Ctx) error {
 
 	return h.redirectToListWithFlash(c, "success",
 		fmt.Sprintf("Группа ОП «%s — %s» удалена", existing.Code, existing.Name.RU))
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  AddRequires — добавление связи группы ОП с предметом ЕНТ
+// ────────────────────────────────────────────────────────────────────────────
+
+// AddRequires создаёт графовую связь specialty_group -> subject.
+//
+//	POST /admin/groups/:id/requires
+//
+// Form fields:
+//   - subject_id: строковый ID предмета (без таблицы)
+//   - priority:   1 (профильный) или 2 (второй)
+func (h *GroupHandlers) AddRequires(c *fiber.Ctx) error {
+	id := c.Params("id")
+	groupRecordID := surrealmodels.NewRecordID("specialty_group", id)
+
+	// Проверяем существование группы.
+	_, err := h.groupRepo.GetByID(c.Context(), groupRecordID)
+	if err != nil {
+		log.Printf("[admin/groups] AddRequires: group %s not found: %v", id, err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusNotFound).SendString("Группа ОП не найдена")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Группа ОП не найдена")
+	}
+
+	subjectIDStr := strings.TrimSpace(c.FormValue("subject_id"))
+	priorityStr := strings.TrimSpace(c.FormValue("priority"))
+
+	if subjectIDStr == "" {
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusUnprocessableEntity).SendString("Выберите предмет ЕНТ")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Выберите предмет ЕНТ")
+	}
+
+	priority, err := strconv.Atoi(priorityStr)
+	if err != nil || (priority != 1 && priority != 2) {
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusUnprocessableEntity).SendString("Приоритет должен быть 1 (профильный) или 2 (второй)")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Приоритет должен быть 1 (профильный) или 2 (второй)")
+	}
+
+	subjectRecordID := surrealmodels.NewRecordID("subject", subjectIDStr)
+
+	// Проверяем существование предмета.
+	subject, err := h.subjectRepo.GetByID(c.Context(), subjectRecordID)
+	if err != nil {
+		log.Printf("[admin/groups] AddRequires: subject %s not found: %v", subjectIDStr, err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusNotFound).SendString("Предмет ЕНТ не найден")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Предмет ЕНТ не найден")
+	}
+
+	_, err = h.groupRepo.CreateRequires(c.Context(), groupRecordID, subjectRecordID, models.CreateRequiresInput{
+		Priority: models.SubjectPriority(priority),
+	})
+	if err != nil {
+		log.Printf("[admin/groups] AddRequires: DB error: %v", err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusInternalServerError).SendString("Ошибка при создании связи")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Ошибка при создании связи с предметом")
+	}
+
+	priorityLabel := "профильный"
+	if priority == 2 {
+		priorityLabel = "второй"
+	}
+
+	log.Printf("[admin/groups] AddRequires: group=%s subject=%s (%s) priority=%d",
+		id, subjectIDStr, subject.Name.RU, priority)
+
+	return h.redirectToEditWithFlash(c, id, "success",
+		fmt.Sprintf("Предмет «%s» (%s) привязан к группе", subject.Name.RU, priorityLabel))
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  DeleteRequires — удаление связи группы ОП с предметом ЕНТ
+// ────────────────────────────────────────────────────────────────────────────
+
+// DeleteRequires удаляет графовую связь requires.
+//
+//	DELETE /admin/groups/:id/requires/:requires_id
+func (h *GroupHandlers) DeleteRequires(c *fiber.Ctx) error {
+	id := c.Params("id")
+	requiresID := c.Params("requires_id")
+	requiresRecordID := surrealmodels.NewRecordID("requires", requiresID)
+
+	if err := h.groupRepo.DeleteRequires(c.Context(), requiresRecordID); err != nil {
+		log.Printf("[admin/groups] DeleteRequires: DB error: %v", err)
+		if isHTMXRequest(c) {
+			return c.Status(fiber.StatusInternalServerError).SendString("Ошибка удаления связи")
+		}
+		return h.redirectToEditWithFlash(c, id, "error", "Ошибка при удалении связи с предметом")
+	}
+
+	log.Printf("[admin/groups] DeleteRequires: group=%s requires=%s deleted", id, requiresID)
+
+	if isHTMXRequest(c) {
+		// Возвращаем пустую строку — HTMX удалит строку из таблицы (hx-swap="outerHTML").
+		return c.SendString("")
+	}
+
+	return h.redirectToEditWithFlash(c, id, "success", "Связь с предметом удалена")
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -345,6 +506,21 @@ func (h *GroupHandlers) renderFormWithErrors(
 		title = fmt.Sprintf("Редактирование — %s", group.Code)
 	}
 
+	allSubjects := h.loadAllSubjects(c)
+
+	// Загружаем текущие связи requires (если редактирование).
+	var requiredSubjects []models.RequiredSubject
+	if isEdit && recordID != "" {
+		groupRecordID := surrealmodels.NewRecordID("specialty_group", recordID)
+		_, reqs, err := h.groupRepo.GetWithSubjects(c.Context(), groupRecordID)
+		if err != nil {
+			log.Printf("[admin/groups] renderFormWithErrors: GetWithSubjects error: %v", err)
+			requiredSubjects = []models.RequiredSubject{}
+		} else {
+			requiredSubjects = reqs
+		}
+	}
+
 	c.Status(fiber.StatusUnprocessableEntity)
 
 	return h.renderer.RenderPage(c, "groups/form.html", PageData{
@@ -353,11 +529,23 @@ func (h *GroupHandlers) renderFormWithErrors(
 		ActiveNav: "groups",
 		Errors:    errs,
 		Content: GroupFormData{
-			IsEdit:   isEdit,
-			RecordID: recordID,
-			Group:    group,
+			IsEdit:           isEdit,
+			RecordID:         recordID,
+			Group:            group,
+			AllSubjects:      allSubjects,
+			RequiredSubjects: requiredSubjects,
 		},
 	})
+}
+
+// loadAllSubjects загружает все предметы ЕНТ (для select-dropdown).
+func (h *GroupHandlers) loadAllSubjects(c *fiber.Ctx) []models.Subject {
+	subjects, err := h.subjectRepo.GetAll(c.Context())
+	if err != nil {
+		log.Printf("[admin/groups] loadAllSubjects: GetAll error: %v", err)
+		return []models.Subject{}
+	}
+	return subjects
 }
 
 // adminData извлекает данные администратора из c.Locals.
@@ -372,4 +560,26 @@ func (h *GroupHandlers) redirectToListWithFlash(c *fiber.Ctx, flashType, message
 		url.QueryEscape(message),
 	)
 	return HTMXRedirect(c, redirectURL)
+}
+
+// redirectToEditWithFlash выполняет редирект на форму редактирования группы ОП с flash-сообщением.
+func (h *GroupHandlers) redirectToEditWithFlash(c *fiber.Ctx, id, flashType, message string) error {
+	redirectURL := fmt.Sprintf("/admin/groups/%s/edit?flash=%s&flash_msg=%s",
+		id,
+		url.QueryEscape(flashType),
+		url.QueryEscape(message),
+	)
+	return HTMXRedirect(c, redirectURL)
+}
+
+// priorityLabel возвращает человекочитабельное название приоритета предмета.
+func priorityLabel(p models.SubjectPriority) string {
+	switch p {
+	case models.SubjectPriorityProfile:
+		return "Профильный"
+	case models.SubjectPrioritySecondary:
+		return "Второй"
+	default:
+		return fmt.Sprintf("Приоритет %d", p)
+	}
 }

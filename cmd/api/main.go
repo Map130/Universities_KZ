@@ -135,7 +135,7 @@ func main() {
 	adminRenderer := admin.Setup(app, admin.Config{
 		ViewsDir: "./views",
 		DevMode:  os.Getenv("APP_ENV") != "production", // hot reload шаблонов в dev
-	}, sessionStore, uniRepo, specRepo, groupRepo, store)
+	}, sessionStore, uniRepo, specRepo, groupRepo, subjectRepo, store)
 
 	// В production режиме прогреваем кэш шаблонов при старте.
 	if os.Getenv("APP_ENV") == "production" {

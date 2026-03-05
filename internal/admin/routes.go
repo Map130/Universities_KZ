@@ -34,6 +34,7 @@ type Config struct {
 //   - uniRepo:      репозиторий вузов (SurrealDB).
 //   - specRepo:     репозиторий специальностей (SurrealDB).
 //   - groupRepo:    репозиторий групп ОП (SurrealDB).
+//   - subjectRepo:  репозиторий предметов ЕНТ (SurrealDB).
 //   - uploader:     файловое хранилище (MinIO/S3).
 //
 // Возвращает *Renderer для возможного pre-warming кэша шаблонов.
@@ -44,6 +45,7 @@ func Setup(
 	uniRepo repository.UniversityRepository,
 	specRepo repository.SpecialtyRepository,
 	groupRepo repository.SpecialtyGroupRepository,
+	subjectRepo repository.SubjectRepository,
 	uploader storage.Uploader,
 ) *Renderer {
 	// ── Template Renderer ───────────────────────────────────
@@ -52,7 +54,8 @@ func Setup(
 	// ── Admin Handlers ──────────────────────────────────────
 	uniHandlers := NewHandlers(uniRepo, sessionStore, uploader, renderer)
 	specHandlers := NewSpecialtyHandlers(specRepo, groupRepo, sessionStore, renderer)
-	groupHandlers := NewGroupHandlers(groupRepo, sessionStore, renderer)
+	groupHandlers := NewGroupHandlers(groupRepo, subjectRepo, sessionStore, renderer)
+	subjectHandlers := NewSubjectHandlers(subjectRepo, sessionStore, renderer)
 
 	// ── Auth Middleware ──────────────────────────────────────
 	// При сборке с тегом noauth используется middleware без проверки
@@ -109,6 +112,18 @@ func Setup(
 	grpGroup := admin.Group("/groups")
 	groupHandlers.RegisterRoutes(grpGroup)
 
+	// ── Subjects CRUD ───────────────────────────────────────
+	// Все маршруты регистрируются внутри RegisterRoutes:
+	//   GET    /admin/subjects            → Index  (список)
+	//   GET    /admin/subjects/new        → New    (форма создания)
+	//   POST   /admin/subjects            → Create (создание)
+	//   GET    /admin/subjects/:id/edit   → Edit   (форма редактирования)
+	//   PUT    /admin/subjects/:id        → Update (обновление)
+	//   POST   /admin/subjects/:id        → UpdatePost (graceful degradation)
+	//   DELETE /admin/subjects/:id        → Delete (удаление)
+	subjGroup := admin.Group("/subjects")
+	subjectHandlers.RegisterRoutes(subjGroup)
+
 	// ── Stub routes (разделы в разработке) ──────────────────
 	// Каждый раздел sidebar должен отдавать страницу, а не 404.
 	// По мере реализации — заменяем stub на полноценный handler.
@@ -131,12 +146,6 @@ func Setup(
 			})
 		}
 	}
-
-	admin.Get("/subjects", stubHandler(
-		"Предметы ЕНТ",
-		"Управление списком предметов Единого национального тестирования. Этот раздел сейчас в разработке.",
-		"subjects",
-	))
 
 	admin.Get("/admins", stubHandler(
 		"Администраторы",

@@ -393,6 +393,8 @@ func TestRenderGroupsIndex(t *testing.T) {
 func TestRenderGroupFormNew(t *testing.T) {
 	r := NewRenderer("../../views", true)
 
+	subjectID := surrealmodels.NewRecordID("subject", "math1")
+
 	data := PageData{
 		Title:     "Новая группа ОП",
 		Admin:     AdminData{Email: "test@test.com", Name: "Test"},
@@ -401,6 +403,13 @@ func TestRenderGroupFormNew(t *testing.T) {
 			IsEdit:   false,
 			RecordID: "",
 			Group:    models.SpecialtyGroup{},
+			AllSubjects: []models.Subject{
+				{
+					ID:   &subjectID,
+					Name: models.LocalizedName{KZ: "Математика", RU: "Математика", EN: "Mathematics"},
+				},
+			},
+			RequiredSubjects: []models.RequiredSubject{},
 		},
 	}
 
@@ -424,11 +433,16 @@ func TestRenderGroupFormNew(t *testing.T) {
 	t.Logf("renderFragment OK, output size: %d bytes", buf.Len())
 }
 
-// TestRenderGroupFormEdit проверяет рендеринг формы редактирования группы ОП.
+// TestRenderGroupFormEdit проверяет рендеринг формы редактирования группы ОП
+// с привязанными предметами ЕНТ (requires edges).
 func TestRenderGroupFormEdit(t *testing.T) {
 	r := NewRenderer("../../views", true)
 
 	groupID := surrealmodels.NewRecordID("specialty_group", "grp1")
+	subjectID1 := surrealmodels.NewRecordID("subject", "math1")
+	subjectID2 := surrealmodels.NewRecordID("subject", "phys1")
+	requiresID1 := surrealmodels.NewRecordID("requires", "req1")
+	requiresID2 := surrealmodels.NewRecordID("requires", "req2")
 
 	data := PageData{
 		Title:     "Редактирование — B057",
@@ -446,12 +460,74 @@ func TestRenderGroupFormEdit(t *testing.T) {
 					EN: "Information Technologies",
 				},
 			},
+			AllSubjects: []models.Subject{
+				{
+					ID:   &subjectID1,
+					Name: models.LocalizedName{KZ: "Математика", RU: "Математика", EN: "Mathematics"},
+				},
+				{
+					ID:   &subjectID2,
+					Name: models.LocalizedName{KZ: "Физика", RU: "Физика", EN: "Physics"},
+				},
+			},
+			RequiredSubjects: []models.RequiredSubject{
+				{
+					ID:       &requiresID1,
+					In:       groupID,
+					Out:      models.Subject{ID: &subjectID1, Name: models.LocalizedName{KZ: "Математика", RU: "Математика", EN: "Mathematics"}},
+					Priority: models.SubjectPriorityProfile,
+				},
+				{
+					ID:       &requiresID2,
+					In:       groupID,
+					Out:      models.Subject{ID: &subjectID2, Name: models.LocalizedName{KZ: "Физика", RU: "Физика", EN: "Physics"}},
+					Priority: models.SubjectPrioritySecondary,
+				},
+			},
 		},
 	}
 
 	var buf bytes.Buffer
 	if err := r.renderFull("groups/form.html", data, &buf); err != nil {
 		t.Fatalf("renderFull failed for edit group form: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Fatal("renderFull returned empty output")
+	}
+	t.Logf("renderFull OK, output size: %d bytes", buf.Len())
+}
+
+// TestRenderGroupFormEditEmpty проверяет рендеринг формы редактирования группы ОП
+// без привязанных предметов ЕНТ (пустой requires list).
+func TestRenderGroupFormEditEmpty(t *testing.T) {
+	r := NewRenderer("../../views", true)
+
+	groupID := surrealmodels.NewRecordID("specialty_group", "grp2")
+
+	data := PageData{
+		Title:     "Редактирование — B058",
+		Admin:     AdminData{Email: "test@test.com", Name: "Test"},
+		ActiveNav: "groups",
+		Content: GroupFormData{
+			IsEdit:   true,
+			RecordID: "grp2",
+			Group: models.SpecialtyGroup{
+				ID:   &groupID,
+				Code: "B058",
+				Name: models.LocalizedName{
+					KZ: "Энергетика",
+					RU: "Энергетика и электротехника",
+					EN: "Energy and Electrical Engineering",
+				},
+			},
+			AllSubjects:      []models.Subject{},
+			RequiredSubjects: []models.RequiredSubject{},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := r.renderFull("groups/form.html", data, &buf); err != nil {
+		t.Fatalf("renderFull failed for edit group form (empty requires): %v", err)
 	}
 	if buf.Len() == 0 {
 		t.Fatal("renderFull returned empty output")
@@ -474,6 +550,8 @@ func TestRenderGroupFormWithErrors(t *testing.T) {
 				Code: "",
 				Name: models.LocalizedName{RU: "Тест"},
 			},
+			AllSubjects:      []models.Subject{},
+			RequiredSubjects: []models.RequiredSubject{},
 		},
 		Errors: map[string]string{
 			"code":    "Код группы ОП обязателен",
@@ -484,6 +562,168 @@ func TestRenderGroupFormWithErrors(t *testing.T) {
 
 	var buf bytes.Buffer
 	if err := r.renderFragment("groups/form.html", data, &buf); err != nil {
+		t.Fatalf("renderFragment failed with validation errors: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Fatal("renderFragment returned empty output")
+	}
+	t.Logf("renderFragment OK, output size: %d bytes", buf.Len())
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Subjects — рендер-тесты шаблонов предметов ЕНТ
+// ────────────────────────────────────────────────────────────────────────────
+
+// TestRenderSubjectsIndex проверяет рендеринг списка предметов ЕНТ.
+func TestRenderSubjectsIndex(t *testing.T) {
+	r := NewRenderer("../../views", true)
+
+	// Пустой список.
+	data := PageData{
+		Title:     "Предметы ЕНТ",
+		Admin:     AdminData{Email: "admin@test.com"},
+		ActiveNav: "subjects",
+		Content: SubjectsListData{
+			Subjects: nil,
+			Search:   "",
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := r.renderFull("subjects/index.html", data, &buf); err != nil {
+		t.Fatalf("renderFull failed for subjects index (empty): %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Fatal("renderFull returned empty output")
+	}
+	t.Logf("renderFull (empty) OK, output size: %d bytes", buf.Len())
+
+	// Список с данными.
+	subjectID1 := surrealmodels.NewRecordID("subject", "math1")
+	subjectID2 := surrealmodels.NewRecordID("subject", "phys1")
+
+	data2 := PageData{
+		Title:     "Предметы ЕНТ",
+		Admin:     AdminData{Email: "admin@test.com", Name: "Admin"},
+		ActiveNav: "subjects",
+		Content: SubjectsListData{
+			Subjects: []models.Subject{
+				{
+					ID:   &subjectID1,
+					Name: models.LocalizedName{KZ: "Математика", RU: "Математика", EN: "Mathematics"},
+				},
+				{
+					ID:   &subjectID2,
+					Name: models.LocalizedName{KZ: "Физика", RU: "Физика", EN: "Physics"},
+				},
+			},
+			Search: "матем",
+		},
+	}
+
+	buf.Reset()
+	if err := r.renderFull("subjects/index.html", data2, &buf); err != nil {
+		t.Fatalf("renderFull failed for subjects index (with data): %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Fatal("renderFull returned empty output")
+	}
+	t.Logf("renderFull (with data) OK, output size: %d bytes", buf.Len())
+}
+
+// TestRenderSubjectFormNew проверяет рендеринг формы создания предмета ЕНТ.
+func TestRenderSubjectFormNew(t *testing.T) {
+	r := NewRenderer("../../views", true)
+
+	data := PageData{
+		Title:     "Новый предмет ЕНТ",
+		Admin:     AdminData{Email: "test@test.com", Name: "Test"},
+		ActiveNav: "subjects",
+		Content: SubjectFormData{
+			IsEdit:   false,
+			RecordID: "",
+			Subject:  models.Subject{},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := r.renderFull("subjects/form.html", data, &buf); err != nil {
+		t.Fatalf("renderFull failed for new subject form: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Fatal("renderFull returned empty output")
+	}
+	t.Logf("renderFull OK, output size: %d bytes", buf.Len())
+
+	// HTMX fragment.
+	buf.Reset()
+	if err := r.renderFragment("subjects/form.html", data, &buf); err != nil {
+		t.Fatalf("renderFragment failed for new subject form: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Fatal("renderFragment returned empty output")
+	}
+	t.Logf("renderFragment OK, output size: %d bytes", buf.Len())
+}
+
+// TestRenderSubjectFormEdit проверяет рендеринг формы редактирования предмета ЕНТ.
+func TestRenderSubjectFormEdit(t *testing.T) {
+	r := NewRenderer("../../views", true)
+
+	subjectID := surrealmodels.NewRecordID("subject", "math1")
+
+	data := PageData{
+		Title:     "Редактирование — Математика",
+		Admin:     AdminData{Email: "test@test.com", Name: "Test"},
+		ActiveNav: "subjects",
+		Content: SubjectFormData{
+			IsEdit:   true,
+			RecordID: "math1",
+			Subject: models.Subject{
+				ID: &subjectID,
+				Name: models.LocalizedName{
+					KZ: "Математика",
+					RU: "Математика",
+					EN: "Mathematics",
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := r.renderFull("subjects/form.html", data, &buf); err != nil {
+		t.Fatalf("renderFull failed for edit subject form: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Fatal("renderFull returned empty output")
+	}
+	t.Logf("renderFull OK, output size: %d bytes", buf.Len())
+}
+
+// TestRenderSubjectFormWithErrors проверяет рендеринг формы предмета ЕНТ с ошибками валидации.
+func TestRenderSubjectFormWithErrors(t *testing.T) {
+	r := NewRenderer("../../views", true)
+
+	data := PageData{
+		Title:     "Новый предмет ЕНТ",
+		Admin:     AdminData{},
+		ActiveNav: "subjects",
+		Content: SubjectFormData{
+			IsEdit:   false,
+			RecordID: "",
+			Subject: models.Subject{
+				Name: models.LocalizedName{RU: ""},
+			},
+		},
+		Errors: map[string]string{
+			"name_ru": "Название на русском обязательно",
+			"name_kz": "Название на казахском обязательно",
+			"name_en": "Название на английском обязательно",
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := r.renderFragment("subjects/form.html", data, &buf); err != nil {
 		t.Fatalf("renderFragment failed with validation errors: %v", err)
 	}
 	if buf.Len() == 0 {

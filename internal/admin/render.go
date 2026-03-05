@@ -370,6 +370,55 @@ func defaultFuncMap() template.FuncMap {
 			}
 			return fmt.Sprintf("%v", v)
 		},
+
+		// int приводит значение к int. Нужно для передачи типизированных
+		// целочисленных значений (например, SubjectPriority) в другие
+		// template-функции, которые принимают int.
+		"int": func(v any) int {
+			switch val := v.(type) {
+			case int:
+				return val
+			case int8:
+				return int(val)
+			case int16:
+				return int(val)
+			case int32:
+				return int(val)
+			case int64:
+				return int(val)
+			case float64:
+				return int(val)
+			case float32:
+				return int(val)
+			default:
+				return 0
+			}
+		},
+
+		// priorityLabel возвращает человекочитабельную метку приоритета предмета ЕНТ.
+		// Использование в шаблоне: {{priorityLabel .Priority}}
+		"priorityLabel": func(p int) string {
+			switch p {
+			case 1:
+				return "Профильный"
+			case 2:
+				return "Второй"
+			default:
+				return fmt.Sprintf("Приоритет %d", p)
+			}
+		},
+
+		// priorityBadge возвращает CSS-классы для бейджа приоритета предмета.
+		"priorityBadge": func(p int) string {
+			switch p {
+			case 1:
+				return "bg-violet-100 text-violet-800"
+			case 2:
+				return "bg-sky-100 text-sky-800"
+			default:
+				return "bg-gray-100 text-gray-800"
+			}
+		},
 	}
 }
 
