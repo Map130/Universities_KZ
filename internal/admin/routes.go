@@ -32,6 +32,8 @@ type Config struct {
 //   - cfg:          конфигурация админки (пути к views, dev mode).
 //   - sessionStore: Fiber session store (общий для auth и admin).
 //   - uniRepo:      репозиторий вузов (SurrealDB).
+//   - specRepo:     репозиторий специальностей (SurrealDB).
+//   - groupRepo:    репозиторий групп ОП (SurrealDB).
 //   - uploader:     файловое хранилище (MinIO/S3).
 //
 // Возвращает *Renderer для возможного pre-warming кэша шаблонов.
@@ -40,6 +42,8 @@ func Setup(
 	cfg Config,
 	sessionStore *session.Store,
 	uniRepo repository.UniversityRepository,
+	specRepo repository.SpecialtyRepository,
+	groupRepo repository.SpecialtyGroupRepository,
 	uploader storage.Uploader,
 ) *Renderer {
 	// ── Template Renderer ───────────────────────────────────
@@ -47,6 +51,8 @@ func Setup(
 
 	// ── Admin Handlers ──────────────────────────────────────
 	uniHandlers := NewHandlers(uniRepo, sessionStore, uploader, renderer)
+	specHandlers := NewSpecialtyHandlers(specRepo, groupRepo, sessionStore, renderer)
+	groupHandlers := NewGroupHandlers(groupRepo, sessionStore, renderer)
 
 	// ── Auth Middleware ──────────────────────────────────────
 	// При сборке с тегом noauth используется middleware без проверки
@@ -79,6 +85,30 @@ func Setup(
 	uniGroup := admin.Group("/universities")
 	uniHandlers.RegisterRoutes(uniGroup)
 
+	// ── Specialties CRUD ────────────────────────────────────
+	// Все маршруты регистрируются внутри RegisterRoutes:
+	//   GET    /admin/specialties            → Index  (список)
+	//   GET    /admin/specialties/new        → New    (форма создания)
+	//   POST   /admin/specialties            → Create (создание)
+	//   GET    /admin/specialties/:id/edit   → Edit   (форма редактирования)
+	//   PUT    /admin/specialties/:id        → Update (обновление)
+	//   POST   /admin/specialties/:id        → UpdatePost (graceful degradation)
+	//   DELETE /admin/specialties/:id        → Delete (удаление)
+	specGroup := admin.Group("/specialties")
+	specHandlers.RegisterRoutes(specGroup)
+
+	// ── Groups CRUD ─────────────────────────────────────────
+	// Все маршруты регистрируются внутри RegisterRoutes:
+	//   GET    /admin/groups            → Index  (список)
+	//   GET    /admin/groups/new        → New    (форма создания)
+	//   POST   /admin/groups            → Create (создание)
+	//   GET    /admin/groups/:id/edit   → Edit   (форма редактирования)
+	//   PUT    /admin/groups/:id        → Update (обновление)
+	//   POST   /admin/groups/:id        → UpdatePost (graceful degradation)
+	//   DELETE /admin/groups/:id        → Delete (удаление)
+	grpGroup := admin.Group("/groups")
+	groupHandlers.RegisterRoutes(grpGroup)
+
 	// ── Stub routes (разделы в разработке) ──────────────────
 	// Каждый раздел sidebar должен отдавать страницу, а не 404.
 	// По мере реализации — заменяем stub на полноценный handler.
@@ -101,18 +131,6 @@ func Setup(
 			})
 		}
 	}
-
-	admin.Get("/specialties", stubHandler(
-		"Специальности",
-		"Управление образовательными программами и специальностями вузов. Этот раздел сейчас в разработке.",
-		"specialties",
-	))
-
-	admin.Get("/groups", stubHandler(
-		"Группы ОП",
-		"Управление группами образовательных программ и требованиями к предметам ЕНТ. Этот раздел сейчас в разработке.",
-		"groups",
-	))
 
 	admin.Get("/subjects", stubHandler(
 		"Предметы ЕНТ",
