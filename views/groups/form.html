@@ -1,0 +1,257 @@
+{{define "content"}}
+<div class="px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Back Link -->
+    <div class="mb-6">
+        <a href="/admin/groups"
+           hx-get="/admin/groups"
+           hx-target="#main-content"
+           hx-push-url="true"
+           class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-150">
+            <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Назад к списку
+        </a>
+    </div>
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">
+            {{if .Content.IsEdit}}Редактирование группы ОП{{else}}Новая группа ОП{{end}}
+        </h1>
+        <p class="mt-1 text-sm text-gray-500">
+            {{if .Content.IsEdit}}Измените данные группы образовательных программ и нажмите «Сохранить»
+            {{else}}Заполните данные новой группы образовательных программ
+            {{end}}
+        </p>
+    </div>
+
+    <!-- Global Error -->
+    {{if .Errors}}
+        {{if hasError .Errors "_global"}}
+        <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
+            <div class="flex">
+                <svg class="h-5 w-5 text-red-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-sm text-red-700">{{getError .Errors "_global"}}</p>
+            </div>
+        </div>
+        {{end}}
+    {{end}}
+
+    <form action="{{if .Content.IsEdit}}/admin/groups/{{.Content.RecordID}}{{else}}/admin/groups{{end}}"
+          method="POST"
+          {{if .Content.IsEdit}}
+          hx-put="/admin/groups/{{.Content.RecordID}}"
+          {{else}}
+          hx-post="/admin/groups"
+          {{end}}
+          hx-target="#main-content"
+          hx-indicator="#form-loader"
+          hx-swap="innerHTML"
+          class="space-y-8">
+
+        {{if .Content.IsEdit}}
+        <input type="hidden" name="_method" value="PUT">
+        {{end}}
+
+        <!-- ══════════════════════════════════════════════════════════
+             SECTION 1: Код группы ОП
+             ══════════════════════════════════════════════════════════ -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-base font-semibold text-gray-900 flex items-center">
+                    <svg class="h-5 w-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                    </svg>
+                    Код группы
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="max-w-md">
+                    <label for="code" class="block text-sm font-medium text-gray-700 mb-1">
+                        Код группы ОП <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text"
+                           name="code"
+                           id="code"
+                           value="{{.Content.Group.Code}}"
+                           placeholder="B057"
+                           class="block w-full px-3 py-2.5 border {{if hasError .Errors "code"}}border-red-300 focus:ring-red-500 focus:border-red-500{{else}}border-gray-300 focus:ring-indigo-500 focus:border-indigo-500{{end}} rounded-lg text-sm shadow-sm transition-shadow duration-150"
+                           required>
+                    {{if hasError .Errors "code"}}
+                    <p class="mt-1 text-xs text-red-600">{{getError .Errors "code"}}</p>
+                    {{else}}
+                    <p class="mt-1 text-xs text-gray-400">Уникальный код группы образовательных программ (например, B057, B058)</p>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             SECTION 2: Локализованные названия
+             ══════════════════════════════════════════════════════════ -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-base font-semibold text-gray-900 flex items-center">
+                    <svg class="h-5 w-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                    </svg>
+                    Название группы ОП
+                </h2>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- Name RU -->
+                <div>
+                    <label for="name_ru" class="block text-sm font-medium text-gray-700 mb-1">
+                        Название (русский) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text"
+                           name="name_ru"
+                           id="name_ru"
+                           value="{{.Content.Group.Name.RU}}"
+                           placeholder="Информационные технологии"
+                           class="block w-full px-3 py-2.5 border {{if hasError .Errors "name_ru"}}border-red-300 focus:ring-red-500 focus:border-red-500{{else}}border-gray-300 focus:ring-indigo-500 focus:border-indigo-500{{end}} rounded-lg text-sm shadow-sm transition-shadow duration-150"
+                           required>
+                    {{if hasError .Errors "name_ru"}}
+                    <p class="mt-1 text-xs text-red-600">{{getError .Errors "name_ru"}}</p>
+                    {{end}}
+                </div>
+
+                <!-- Name KZ -->
+                <div>
+                    <label for="name_kz" class="block text-sm font-medium text-gray-700 mb-1">
+                        Название (казахский) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text"
+                           name="name_kz"
+                           id="name_kz"
+                           value="{{.Content.Group.Name.KZ}}"
+                           placeholder="Ақпараттық технологиялар"
+                           class="block w-full px-3 py-2.5 border {{if hasError .Errors "name_kz"}}border-red-300 focus:ring-red-500 focus:border-red-500{{else}}border-gray-300 focus:ring-indigo-500 focus:border-indigo-500{{end}} rounded-lg text-sm shadow-sm transition-shadow duration-150"
+                           required>
+                    {{if hasError .Errors "name_kz"}}
+                    <p class="mt-1 text-xs text-red-600">{{getError .Errors "name_kz"}}</p>
+                    {{end}}
+                </div>
+
+                <!-- Name EN -->
+                <div>
+                    <label for="name_en" class="block text-sm font-medium text-gray-700 mb-1">
+                        Название (английский) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text"
+                           name="name_en"
+                           id="name_en"
+                           value="{{.Content.Group.Name.EN}}"
+                           placeholder="Information Technologies"
+                           class="block w-full px-3 py-2.5 border {{if hasError .Errors "name_en"}}border-red-300 focus:ring-red-500 focus:border-red-500{{else}}border-gray-300 focus:ring-indigo-500 focus:border-indigo-500{{end}} rounded-lg text-sm shadow-sm transition-shadow duration-150"
+                           required>
+                    {{if hasError .Errors "name_en"}}
+                    <p class="mt-1 text-xs text-red-600">{{getError .Errors "name_en"}}</p>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             SECTION 3: Предметы ЕНТ
+             ══════════════════════════════════════════════════════════ -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-gray-900 flex items-center">
+                        <svg class="h-5 w-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                        Предметы ЕНТ
+                    </h2>
+                    <span class="text-xs text-gray-400">
+                        Два профильных предмета для поступления
+                    </span>
+                </div>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- Subject 1 -->
+                <div>
+                    <label for="subject_1" class="block text-sm font-medium text-gray-700 mb-1">
+                        Первый предмет ЕНТ <span class="text-red-500">*</span>
+                    </label>
+                    <select name="subject_1"
+                            id="subject_1"
+                            class="block w-full py-2.5 pl-3 pr-10 border {{if hasError .Errors "subject_1"}}border-red-300 focus:ring-red-500 focus:border-red-500{{else}}border-gray-300 focus:ring-indigo-500 focus:border-indigo-500{{end}} rounded-lg text-sm shadow-sm transition-shadow duration-150"
+                            required>
+                        <option value="">— Выберите предмет —</option>
+                        {{$sel1 := .Content.SelectedSubject1}}
+                        {{range .Content.AllSubjects}}
+                        <option value="{{recordID .ID}}" {{if eqStr (recordID .ID) $sel1}}selected{{end}}>{{.Name.RU}}</option>
+                        {{end}}
+                    </select>
+                    {{if hasError .Errors "subject_1"}}
+                    <p class="mt-1 text-xs text-red-600">{{getError .Errors "subject_1"}}</p>
+                    {{else}}
+                    <p class="mt-1 text-xs text-gray-400">Первый профильный предмет ЕНТ для данной группы ОП</p>
+                    {{end}}
+                </div>
+
+                <!-- Subject 2 -->
+                <div>
+                    <label for="subject_2" class="block text-sm font-medium text-gray-700 mb-1">
+                        Второй предмет ЕНТ <span class="text-red-500">*</span>
+                    </label>
+                    <select name="subject_2"
+                            id="subject_2"
+                            class="block w-full py-2.5 pl-3 pr-10 border {{if hasError .Errors "subject_2"}}border-red-300 focus:ring-red-500 focus:border-red-500{{else}}border-gray-300 focus:ring-indigo-500 focus:border-indigo-500{{end}} rounded-lg text-sm shadow-sm transition-shadow duration-150"
+                            required>
+                        <option value="">— Выберите предмет —</option>
+                        {{$sel2 := .Content.SelectedSubject2}}
+                        {{range .Content.AllSubjects}}
+                        <option value="{{recordID .ID}}" {{if eqStr (recordID .ID) $sel2}}selected{{end}}>{{.Name.RU}}</option>
+                        {{end}}
+                    </select>
+                    {{if hasError .Errors "subject_2"}}
+                    <p class="mt-1 text-xs text-red-600">{{getError .Errors "subject_2"}}</p>
+                    {{else}}
+                    <p class="mt-1 text-xs text-gray-400">Второй профильный предмет ЕНТ для данной группы ОП</p>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             ACTIONS: Submit / Cancel
+             ══════════════════════════════════════════════════════════ -->
+        <div class="flex items-center justify-between pt-2">
+            <!-- Cancel -->
+            <a href="/admin/groups"
+               hx-get="/admin/groups"
+               hx-target="#main-content"
+               hx-push-url="true"
+               class="inline-flex items-center px-4 py-2.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150">
+                Отмена
+            </a>
+
+            <!-- Submit -->
+            <div class="flex items-center space-x-3">
+                <!-- Loader -->
+                <div id="form-loader" class="htmx-indicator flex items-center">
+                    <svg class="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+
+                <button type="submit"
+                        class="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    {{if .Content.IsEdit}}Сохранить изменения{{else}}Создать группу ОП{{end}}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{{end}}

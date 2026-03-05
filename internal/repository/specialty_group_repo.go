@@ -37,6 +37,12 @@ type SpecialtyGroupRepository interface {
 	// CreateRequires создаёт графовую связь specialty_group -> subject
 	// с указанием приоритета предмета (1 = основной, 2 = второй).
 	CreateRequires(ctx context.Context, groupID, subjectID surrealmodels.RecordID, input models.CreateRequiresInput) (*models.Requires, error)
+
+	// DeleteRequires удаляет графовую связь requires по её ID.
+	DeleteRequires(ctx context.Context, id surrealmodels.RecordID) error
+
+	// DeleteAllRequires удаляет все связи requires для данной группы ОП.
+	DeleteAllRequires(ctx context.Context, groupID surrealmodels.RecordID) error
 }
 
 // surrealSpecialtyGroupRepo — реализация поверх SurrealDB.
@@ -197,11 +203,17 @@ func (r *surrealSpecialtyGroupRepo) Create(ctx context.Context, g models.Special
 		"name": map[string]any{"kz": g.Name.KZ, "ru": g.Name.RU, "en": g.Name.EN},
 	}
 
-	result, err := surrealdb.Create[models.SpecialtyGroup](ctx, r.db, surrealmodels.Table("specialty_group"), data)
+	// SurrealDB возвращает массив при CREATE на таблицу (Table),
+	// даже если создаётся одна запись. Десериализуем как []models.SpecialtyGroup.
+	result, err := surrealdb.Create[[]models.SpecialtyGroup](ctx, r.db, surrealmodels.Table("specialty_group"), data)
 	if err != nil {
 		return nil, fmt.Errorf("specialtyGroup.Create: %w", err)
 	}
-	return result, nil
+	if result == nil || len(*result) == 0 {
+		return nil, fmt.Errorf("specialtyGroup.Create: empty result from DB")
+	}
+	created := (*result)[0]
+	return &created, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -255,4 +267,31 @@ func (r *surrealSpecialtyGroupRepo) CreateRequires(
 		return nil, fmt.Errorf("specialtyGroup.CreateRequires: %w", err)
 	}
 	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+//  DeleteRequires  (удаление одной связи requires по ID)
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyGroupRepo) DeleteRequires(ctx context.Context, id surrealmodels.RecordID) error {
+	if _, err := surrealdb.Delete[models.Requires](ctx, r.db, id); err != nil {
+		return fmt.Errorf("specialtyGroup.DeleteRequires: %w", err)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+//  DeleteAllRequires  (удаление всех связей requires для группы ОП)
+// ---------------------------------------------------------------------------
+
+func (r *surrealSpecialtyGroupRepo) DeleteAllRequires(ctx context.Context, groupID surrealmodels.RecordID) error {
+	_, err := surrealdb.Query[any](
+		ctx, r.db,
+		"DELETE FROM requires WHERE in = $group_id",
+		map[string]any{"group_id": groupID},
+	)
+	if err != nil {
+		return fmt.Errorf("specialtyGroup.DeleteAllRequires: %w", err)
+	}
+	return nil
 }

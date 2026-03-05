@@ -50,11 +50,18 @@ DEFINE FIELD OVERWRITE website        ON TABLE university TYPE option<string>;
 -- Свободное описание --
 DEFINE FIELD OVERWRITE description    ON TABLE university TYPE option<string>;
 
+-- Кастомный CSS для премиум-вузов.
+-- Хранит произвольный CSS, который инжектится на публичной странице вуза
+-- внутри изолированного контейнера (см. комментарии по безопасности в хендлерах).
+-- По умолчанию — пустая строка (не premium).
+DEFINE FIELD OVERWRITE custom_css     ON TABLE university TYPE string
+    DEFAULT "";
+
 -- Временные метки --
 DEFINE FIELD OVERWRITE created_at     ON TABLE university TYPE datetime
     DEFAULT time::now();
 DEFINE FIELD OVERWRITE updated_at     ON TABLE university TYPE datetime
-    DEFAULT time::now();
+    VALUE time::now();
 
 -- Индекс по городу (обычный, для фильтрации) --
 DEFINE INDEX OVERWRITE idx_university_city
@@ -78,13 +85,10 @@ DEFINE INDEX OVERWRITE idx_university_name_en_search
     FIELDS name.en
     FULLTEXT ANALYZER name_analyzer BM25;
 
--- Событие: автообновление updated_at при UPDATE --
-DEFINE EVENT OVERWRITE ev_university_updated
-    ON TABLE university
-    WHEN $event = "UPDATE"
-    THEN {
-        UPDATE university SET updated_at = time::now() WHERE id = $after.id;
-    };
+-- updated_at обновляется автоматически через VALUE time::now() на поле,
+-- без EVENT (EVENT вызывал рекурсивный UPDATE → бесконечный цикл).
+-- Удаляем старый EVENT, если он остался в базе от предыдущей схемы.
+REMOVE EVENT IF EXISTS ev_university_updated ON TABLE university;
 
 
 -- ═════════════════════════════════════════════════════════════
@@ -110,7 +114,7 @@ DEFINE FIELD OVERWRITE name.en        ON TABLE specialty_group TYPE string;
 DEFINE FIELD OVERWRITE created_at     ON TABLE specialty_group TYPE datetime
     DEFAULT time::now();
 DEFINE FIELD OVERWRITE updated_at     ON TABLE specialty_group TYPE datetime
-    DEFAULT time::now();
+    VALUE time::now();
 
 -- Уникальный индекс на код группы --
 DEFINE INDEX OVERWRITE idx_specialty_group_code
@@ -133,13 +137,8 @@ DEFINE INDEX OVERWRITE idx_specialty_group_name_en_search
     FIELDS name.en
     FULLTEXT ANALYZER name_analyzer BM25;
 
--- Событие: автообновление updated_at при UPDATE --
-DEFINE EVENT OVERWRITE ev_specialty_group_updated
-    ON TABLE specialty_group
-    WHEN $event = "UPDATE"
-    THEN {
-        UPDATE specialty_group SET updated_at = time::now() WHERE id = $after.id;
-    };
+-- updated_at обновляется автоматически через VALUE time::now() на поле.
+REMOVE EVENT IF EXISTS ev_specialty_group_updated ON TABLE specialty_group;
 
 
 -- ═════════════════════════════════════════════════════════════
@@ -168,7 +167,7 @@ DEFINE FIELD OVERWRITE `group`        ON TABLE specialty TYPE record<specialty_g
 DEFINE FIELD OVERWRITE created_at     ON TABLE specialty TYPE datetime
     DEFAULT time::now();
 DEFINE FIELD OVERWRITE updated_at     ON TABLE specialty TYPE datetime
-    DEFAULT time::now();
+    VALUE time::now();
 
 -- Уникальный индекс на код специальности --
 DEFINE INDEX OVERWRITE idx_specialty_code
@@ -191,13 +190,8 @@ DEFINE INDEX OVERWRITE idx_specialty_name_en_search
     FIELDS name.en
     FULLTEXT ANALYZER name_analyzer BM25;
 
--- Событие: автообновление updated_at при UPDATE --
-DEFINE EVENT OVERWRITE ev_specialty_updated
-    ON TABLE specialty
-    WHEN $event = "UPDATE"
-    THEN {
-        UPDATE specialty SET updated_at = time::now() WHERE id = $after.id;
-    };
+-- updated_at обновляется автоматически через VALUE time::now() на поле.
+REMOVE EVENT IF EXISTS ev_specialty_updated ON TABLE specialty;
 
 
 -- ═════════════════════════════════════════════════════════════
@@ -219,15 +213,10 @@ DEFINE FIELD OVERWRITE name.en        ON TABLE subject TYPE string;
 DEFINE FIELD OVERWRITE created_at     ON TABLE subject TYPE datetime
     DEFAULT time::now();
 DEFINE FIELD OVERWRITE updated_at     ON TABLE subject TYPE datetime
-    DEFAULT time::now();
+    VALUE time::now();
 
--- Событие: автообновление updated_at при UPDATE --
-DEFINE EVENT OVERWRITE ev_subject_updated
-    ON TABLE subject
-    WHEN $event = "UPDATE"
-    THEN {
-        UPDATE subject SET updated_at = time::now() WHERE id = $after.id;
-    };
+-- updated_at обновляется автоматически через VALUE time::now() на поле.
+REMOVE EVENT IF EXISTS ev_subject_updated ON TABLE subject;
 
 
 -- ═════════════════════════════════════════════════════════════
@@ -267,15 +256,10 @@ DEFINE FIELD OVERWRITE last_year_threshold ON TABLE offers TYPE int
 DEFINE FIELD OVERWRITE created_at         ON TABLE offers TYPE datetime
     DEFAULT time::now();
 DEFINE FIELD OVERWRITE updated_at         ON TABLE offers TYPE datetime
-    DEFAULT time::now();
+    VALUE time::now();
 
--- Событие: автообновление updated_at при UPDATE --
-DEFINE EVENT OVERWRITE ev_offers_updated
-    ON TABLE offers
-    WHEN $event = "UPDATE"
-    THEN {
-        UPDATE offers SET updated_at = time::now() WHERE id = $after.id;
-    };
+-- updated_at обновляется автоматически через VALUE time::now() на поле.
+REMOVE EVENT IF EXISTS ev_offers_updated ON TABLE offers;
 
 
 -- ═════════════════════════════════════════════════════════════
@@ -304,19 +288,40 @@ DEFINE FIELD OVERWRITE priority           ON TABLE requires TYPE int
 DEFINE FIELD OVERWRITE created_at         ON TABLE requires TYPE datetime
     DEFAULT time::now();
 DEFINE FIELD OVERWRITE updated_at         ON TABLE requires TYPE datetime
-    DEFAULT time::now();
+    VALUE time::now();
 
--- Событие: автообновление updated_at при UPDATE --
-DEFINE EVENT OVERWRITE ev_requires_updated
-    ON TABLE requires
-    WHEN $event = "UPDATE"
-    THEN {
-        UPDATE requires SET updated_at = time::now() WHERE id = $after.id;
-    };
+-- updated_at обновляется автоматически через VALUE time::now() на поле.
+REMOVE EVENT IF EXISTS ev_requires_updated ON TABLE requires;
 
 
 -- ═════════════════════════════════════════════════════════════
---  7.  ПРИМЕРЫ ЗАПРОСОВ  (не выполняются, только справка)
+--  7.  TABLE: allowed_admins  —  Whitelist email-адресов
+--      администраторов, которым разрешён доступ через Google OAuth.
+-- ═════════════════════════════════════════════════════════════
+
+DEFINE TABLE OVERWRITE allowed_admins SCHEMAFULL
+    PERMISSIONS
+        FOR select, create, update, delete FULL;
+
+-- Email администратора (уникальный, нижний регистр) --
+DEFINE FIELD OVERWRITE email          ON TABLE allowed_admins TYPE string
+    ASSERT string::is_email($value);
+
+-- Имя администратора (необязательное, для удобства идентификации) --
+DEFINE FIELD OVERWRITE name           ON TABLE allowed_admins TYPE option<string>;
+
+-- Временные метки --
+DEFINE FIELD OVERWRITE created_at     ON TABLE allowed_admins TYPE datetime
+    DEFAULT time::now();
+
+-- Уникальный индекс на email — гарантирует отсутствие дублей --
+DEFINE INDEX OVERWRITE idx_allowed_admins_email
+    ON TABLE allowed_admins
+    FIELDS email UNIQUE;
+
+
+-- ═════════════════════════════════════════════════════════════
+--  8.  ПРИМЕРЫ ЗАПРОСОВ  (не выполняются, только справка)
 -- ═════════════════════════════════════════════════════════════
 
 /*

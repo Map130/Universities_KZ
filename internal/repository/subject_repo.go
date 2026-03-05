@@ -54,11 +54,17 @@ func (r *surrealSubjectRepo) Create(ctx context.Context, s models.Subject) (*mod
 	data := map[string]any{
 		"name": map[string]any{"kz": s.Name.KZ, "ru": s.Name.RU, "en": s.Name.EN},
 	}
-	result, err := surrealdb.Create[models.Subject](ctx, r.db, surrealmodels.Table("subject"), data)
+	// SurrealDB возвращает массив при CREATE на таблицу (Table),
+	// даже если создаётся одна запись. Десериализуем как []models.Subject.
+	result, err := surrealdb.Create[[]models.Subject](ctx, r.db, surrealmodels.Table("subject"), data)
 	if err != nil {
 		return nil, fmt.Errorf("subject.Create: %w", err)
 	}
-	return result, nil
+	if result == nil || len(*result) == 0 {
+		return nil, fmt.Errorf("subject.Create: empty result from DB")
+	}
+	created := (*result)[0]
+	return &created, nil
 }
 
 func (r *surrealSubjectRepo) Update(ctx context.Context, id surrealmodels.RecordID, s models.Subject) (*models.Subject, error) {

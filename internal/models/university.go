@@ -32,6 +32,11 @@ type University struct {
 	// Свободное описание вуза. Может отсутствовать.
 	Description *string `json:"description,omitempty" cbor:"description,omitempty"`
 
+	// Кастомный CSS для премиум-вузов.
+	// Инжектится на публичной странице вуза внутри изолированного контейнера.
+	// Пустая строка означает отсутствие кастомного оформления.
+	CustomCSS string `json:"custom_css" cbor:"custom_css"`
+
 	// Временные метки (заполняются SurrealDB автоматически).
 	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty"`
 	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty"`
