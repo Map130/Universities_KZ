@@ -5,9 +5,11 @@
 *.so
 *.dylib
 
+
 # Build output
 /tmp/
 build-errors.log
+
 
 # Node / Tailwind
 node_modules/
