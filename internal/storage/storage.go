@@ -223,7 +223,7 @@ func (s *minioStorage) UploadImage(ctx context.Context, file *multipart.FileHead
 	if err != nil {
 		return "", fmt.Errorf("storage: open uploaded file: %w", err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	// 5. Загружаем в MinIO.
 	_, err = s.client.PutObject(ctx, BucketLogos, objectName, src, file.Size, minio.PutObjectOptions{
@@ -258,7 +258,7 @@ func (s *minioStorage) UploadDocument(ctx context.Context, file *multipart.FileH
 	if err != nil {
 		return "", fmt.Errorf("storage: open uploaded file: %w", err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	_, err = s.client.PutObject(ctx, BucketDocuments, objectName, src, file.Size, minio.PutObjectOptions{
 		ContentType: contentType,
@@ -302,7 +302,7 @@ func detectContentType(fh *multipart.FileHeader) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("storage: open file for content detection: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	buf := make([]byte, 512)
 	n, err := f.Read(buf)

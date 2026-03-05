@@ -351,9 +351,6 @@ func defaultFuncMap() template.FuncMap {
 			type recordIDer interface {
 				String() string
 			}
-			// Пытаемся извлечь поле ID напрямую через рефлексию-lite:
-			// RecordID.ID содержит "чистый" идентификатор без имени таблицы.
-			type hasID interface{ GetID() any }
 			// SDK не экспортирует GetID(), поэтому работаем через String()
 			// и отсекаем префикс "table:".
 			if rid, ok := v.(recordIDer); ok {
@@ -556,9 +553,10 @@ func removeURLFunctions(s string) string {
 		j := i + idx + 4 // после "url("
 		depth := 1
 		for j < len(s) && depth > 0 {
-			if s[j] == '(' {
+			switch s[j] {
+			case '(':
 				depth++
-			} else if s[j] == ')' {
+			case ')':
 				depth--
 			}
 			j++

@@ -654,15 +654,3 @@ func (h *GroupHandlers) redirectToEditWithFlash(c *fiber.Ctx, id, flashType, mes
 	)
 	return HTMXRedirect(c, redirectURL)
 }
-
-// priorityLabel возвращает человекочитабельное название приоритета предмета.
-func priorityLabel(p models.SubjectPriority) string {
-	switch p {
-	case models.SubjectPriorityProfile:
-		return "Профильный"
-	case models.SubjectPrioritySecondary:
-		return "Второй"
-	default:
-		return fmt.Sprintf("Приоритет %d", p)
-	}
-}

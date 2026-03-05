@@ -679,7 +679,7 @@ func (h *Handlers) uploadLogo(c *fiber.Ctx) (string, error) {
 	logoURL, err := h.storage.UploadImage(c.Context(), file)
 	if err != nil {
 		log.Printf("[admin/universities] uploadLogo: error: %v", err)
-		return "", fmt.Errorf("Ошибка загрузки логотипа: %v", err)
+		return "", fmt.Errorf("ошибка загрузки логотипа: %v", err)
 	}
 
 	return logoURL, nil
