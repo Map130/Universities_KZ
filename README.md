@@ -145,7 +145,14 @@ SurrealDB будет на `:8000`, MinIO на `:9000` (консоль `:9001`).
 go run ./cmd/api
 ```
 
-Или через Air для hot reload:
+### 3. Установка зависимостей
+
+```
+go mod download
+npm install
+```
+
+### 4. Запуск (dev)
 
 ```sh
 air

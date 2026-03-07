@@ -1,0 +1,86 @@
+{{define "_row"}}
+<tr class="hover:bg-gray-50 transition-colors duration-100" id="uni-row-{{recordID .ID}}">
+    <!-- University Name + Logo -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10">
+                {{if .LogoURL}}
+                <img class="h-10 w-10 rounded-lg object-cover border border-gray-200"
+                     src="{{.LogoURL}}"
+                     alt="{{.Name.RU}}"
+                     loading="lazy">
+                {{else}}
+                <div class="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                    <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                </div>
+                {{end}}
+            </div>
+            <div class="ml-4">
+                <div class="text-sm font-semibold text-gray-900">
+                    {{.Name.RU}}
+                </div>
+                <div class="text-xs text-gray-500 mt-0.5">
+                    {{if .Abbr}}{{.Abbr}}{{end}}
+                    {{if .Name.KZ}}<span class="text-gray-300 mx-1">&middot;</span> {{.Name.KZ}}{{end}}
+                </div>
+            </div>
+        </div>
+    </td>
+
+    <!-- City -->
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+        {{.City}}
+    </td>
+
+    <!-- Type Badge -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{uniTypeBadge (printf "%s" .Type)}}">
+            {{uniTypeLabel (printf "%s" .Type)}}
+        </span>
+    </td>
+
+    <!-- Custom CSS indicator -->
+    <td class="px-6 py-4 whitespace-nowrap text-sm">
+        {{if .CustomCSS}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <svg class="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+            </svg>
+            Premium
+        </span>
+        {{else}}
+        <span class="text-gray-300">&mdash;</span>
+        {{end}}
+    </td>
+
+    <!-- Actions -->
+    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div class="flex items-center justify-end space-x-3">
+            <a href="/admin/universities/{{recordID .ID}}/edit"
+               hx-get="/admin/universities/{{recordID .ID}}/edit"
+               hx-target="#main-content"
+               hx-push-url="true"
+               class="text-indigo-600 hover:text-indigo-900 transition-colors duration-150"
+               title="Редактировать">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+            </a>
+            <button type="button"
+                    hx-delete="/admin/universities/{{recordID .ID}}"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:0.3s"
+                    hx-confirm="Удалить «{{.Name.RU}}»? Это действие нельзя отменить."
+                    hx-indicator="#table-loader"
+                    class="text-red-500 hover:text-red-700 transition-colors duration-150"
+                    title="Удалить">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </button>
+        </div>
+    </td>
+</tr>
+{{end}}

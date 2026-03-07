@@ -11,10 +11,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gofiber/fiber/v2/middleware/session"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/Map130/universities/internal/admin"
+	"github.com/Map130/universities/internal/auth"
 	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/models"
 	"github.com/Map130/universities/internal/repository"
@@ -70,8 +74,28 @@ func main() {
 	groupRepo := repository.NewSpecialtyGroupRepository(surrealDB)
 	specRepo := repository.NewSpecialtyRepository(surrealDB)
 	subjectRepo := repository.NewSubjectRepository(surrealDB)
+	adminRepo := repository.NewAdminRepository(surrealDB)
 
 	log.Println("[app] repositories initialized")
+
+	// ── Google OAuth 2.0 ────────────────────────────────────
+	// При сборке с тегом noauth (go build -tags noauth) аутентификация
+	// полностью отключена: OAuth не инициализируется, сессия создаётся
+	// с фиктивным секретом, auth-роуты не регистрируются.
+	var sessionStore *session.Store
+
+	if auth.IsNoAuth() {
+		log.Println("[app] ⚠️  noauth build: skipping Google OAuth, using dummy session store")
+		sessionStore = auth.NewSessionStore("noauth-dev-secret")
+	} else {
+		authCfg, err := auth.LoadConfigFromEnv()
+		if err != nil {
+			log.Fatalf("Ошибка загрузки OAuth-конфигурации: %v", err)
+		}
+		auth.InitGothProviders(authCfg)
+		sessionStore = auth.NewSessionStore(authCfg.SessionSecret)
+		log.Println("[app] Google OAuth initialized")
+	}
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Universities KZ v1.0",
@@ -97,6 +121,30 @@ func main() {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "online", "db": "connected"})
 	})
+
+	// ── Auth routes (публичные) ─────────────────────────────
+	// В noauth-билде OAuth-роуты не регистрируются (они не нужны).
+	if !auth.IsNoAuth() {
+		authHandlers := auth.NewHandlers(sessionStore, adminRepo)
+		authHandlers.RegisterRoutes(app)
+	}
+
+	// ── Admin Panel (HTML, HTMX, Tailwind) ──────────────────
+	// Setup регистрирует все /admin/* маршруты с AuthRequired middleware.
+	// Renderer использует html/template с layout + фрагментами для HTMX.
+	adminRenderer := admin.Setup(app, admin.Config{
+		ViewsDir: "./views",
+		DevMode:  os.Getenv("APP_ENV") != "production", // hot reload шаблонов в dev
+	}, sessionStore, uniRepo, specRepo, groupRepo, subjectRepo, store)
+
+	// В production режиме прогреваем кэш шаблонов при старте.
+	if os.Getenv("APP_ENV") == "production" {
+		if err := adminRenderer.WalkTemplates(); err != nil {
+			log.Printf("[app] warning: template pre-cache error: %v", err)
+		}
+	}
+
+	log.Println("[app] admin panel initialized at /admin")
 
 	v1 := app.Group("/api/v1")
 
