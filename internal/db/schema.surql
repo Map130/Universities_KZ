@@ -294,34 +294,9 @@ DEFINE FIELD OVERWRITE updated_at         ON TABLE requires TYPE datetime
 REMOVE EVENT IF EXISTS ev_requires_updated ON TABLE requires;
 
 
--- ═════════════════════════════════════════════════════════════
---  7.  TABLE: allowed_admins  —  Whitelist email-адресов
---      администраторов, которым разрешён доступ через Google OAuth.
--- ═════════════════════════════════════════════════════════════
-
-DEFINE TABLE OVERWRITE allowed_admins SCHEMAFULL
-    PERMISSIONS
-        FOR select, create, update, delete FULL;
-
--- Email администратора (уникальный, нижний регистр) --
-DEFINE FIELD OVERWRITE email          ON TABLE allowed_admins TYPE string
-    ASSERT string::is_email($value);
-
--- Имя администратора (необязательное, для удобства идентификации) --
-DEFINE FIELD OVERWRITE name           ON TABLE allowed_admins TYPE option<string>;
-
--- Временные метки --
-DEFINE FIELD OVERWRITE created_at     ON TABLE allowed_admins TYPE datetime
-    DEFAULT time::now();
-
--- Уникальный индекс на email — гарантирует отсутствие дублей --
-DEFINE INDEX OVERWRITE idx_allowed_admins_email
-    ON TABLE allowed_admins
-    FIELDS email UNIQUE;
-
 
 -- ═════════════════════════════════════════════════════════════
---  8.  ПРИМЕРЫ ЗАПРОСОВ  (не выполняются, только справка)
+--  7.  ПРИМЕРЫ ЗАПРОСОВ  (не выполняются, только справка)
 -- ═════════════════════════════════════════════════════════════
 
 /*
