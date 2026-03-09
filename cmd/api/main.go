@@ -9,25 +9,13 @@ import (
 	"syscall"
 	"time"
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-	"github.com/gofiber/fiber/v2/middleware/session"
-=======
-	"runtime"
->>>>>>> d258f37 (Add SurrealDB connection pool and use it)
-
-=======
->>>>>>> 12f28c3 (Add Swagger docs and API handlers)
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/swagger"
 
-	"github.com/Map130/universities/internal/admin"
-	"github.com/Map130/universities/internal/auth"
 	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/handlers"
 	"github.com/Map130/universities/internal/repository"
-	"github.com/Map130/universities/internal/storage"
 
 	_ "github.com/Map130/universities/docs/swagger"
 )
@@ -65,15 +53,6 @@ func main() {
 	}
 	appPort := requireEnv("APP_PORT")
 
-	// ── MinIO config ────────────────────────────────────────
-	minioCfg := storage.Config{
-		Endpoint:       requireEnv("MINIO_ENDPOINT"), // например "localhost:9000"
-		AccessKey:      requireEnv("MINIO_ROOT_USER"),
-		SecretKey:      requireEnv("MINIO_ROOT_PASSWORD"),
-		UseSSL:         os.Getenv("MINIO_USE_SSL") == "true",
-		PublicEndpoint: requireEnv("MINIO_PUBLIC_URL"), // например "http://localhost:9000"
-	}
-
 	ctx := context.Background()
 
 	// ── Пул подключений к SurrealDB ─────────────────────────
@@ -96,52 +75,16 @@ func main() {
 		log.Fatalf("Ошибка миграции схемы: %v", err)
 	}
 
-	// ── Инициализация MinIO storage ─────────────────────────
-	store, err := storage.NewMinioStorage(ctx, minioCfg)
-	if err != nil {
-		log.Fatalf("Ошибка подключения к MinIO: %v", err)
-	}
-
-<<<<<< HEAD
-	// Инициализация репозиториев
-	uniRepo := repository.NewUniversityRepository(surrealDB)
-	groupRepo := repository.NewSpecialtyGroupRepository(surrealDB)
-	specRepo := repository.NewSpecialtyRepository(surrealDB)
-	subjectRepo := repository.NewSubjectRepository(surrealDB)
-	adminRepo := repository.NewAdminRepository(surrealDB)
-=======
 	// Инициализация репозиториев (используют пул подключений)
 	uniRepo := repository.NewUniversityRepository(pool)
 	groupRepo := repository.NewSpecialtyGroupRepository(pool)
 	specRepo := repository.NewSpecialtyRepository(pool)
 	subjectRepo := repository.NewSubjectRepository(pool)
->>>>>>> d258f37 (Add SurrealDB connection pool and use it)
 
 	log.Println("[app] repositories initialized")
 
-<<<<<<< HEAD
-	// ── Google OAuth 2.0 ────────────────────────────────────
-	// При сборке с тегом noauth (go build -tags noauth) аутентификация
-	// полностью отключена: OAuth не инициализируется, сессия создаётся
-	// с фиктивным секретом, auth-роуты не регистрируются.
-	var sessionStore *session.Store
-
-	if auth.IsNoAuth() {
-		log.Println("[app] ⚠️  noauth build: skipping Google OAuth, using dummy session store")
-		sessionStore = auth.NewSessionStore("noauth-dev-secret")
-	} else {
-		authCfg, err := auth.LoadConfigFromEnv()
-		if err != nil {
-			log.Fatalf("Ошибка загрузки OAuth-конфигурации: %v", err)
-		}
-		auth.InitGothProviders(authCfg)
-		sessionStore = auth.NewSessionStore(authCfg.SessionSecret)
-		log.Println("[app] Google OAuth initialized")
-	}
-=======
 	// ── Handler (все хендлеры в одном месте) ─────────────────
-	h := handlers.NewHandler(uniRepo, groupRepo, specRepo, subjectRepo, store)
->>>>>>> 12f28c3 (Add Swagger docs and API handlers)
+	h := handlers.NewHandler(uniRepo, groupRepo, specRepo, subjectRepo)
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Universities KZ v1.0",
@@ -167,43 +110,15 @@ func main() {
 	// ── Swagger UI ──────────────────────────────────────────
 	app.Get("/swagger/*", swagger.HandlerDefault)
 
-<<<<<<< HEAD
-	// ── Auth routes (публичные) ─────────────────────────────
-	// В noauth-билде OAuth-роуты не регистрируются (они не нужны).
-	if !auth.IsNoAuth() {
-		authHandlers := auth.NewHandlers(sessionStore, adminRepo)
-		authHandlers.RegisterRoutes(app)
-	}
-
-	// ── Admin Panel (HTML, HTMX, Tailwind) ──────────────────
-	// Setup регистрирует все /admin/* маршруты с AuthRequired middleware.
-	// Renderer использует html/template с layout + фрагментами для HTMX.
-	adminRenderer := admin.Setup(app, admin.Config{
-		ViewsDir: "./views",
-		DevMode:  os.Getenv("APP_ENV") != "production", // hot reload шаблонов в dev
-	}, sessionStore, uniRepo, specRepo, groupRepo, subjectRepo, store)
-
-	// В production режиме прогреваем кэш шаблонов при старте.
-	if os.Getenv("APP_ENV") == "production" {
-		if err := adminRenderer.WalkTemplates(); err != nil {
-			log.Printf("[app] warning: template pre-cache error: %v", err)
-		}
-	}
-
-	log.Println("[app] admin panel initialized at /admin")
-
-=======
 	// ── Health ──────────────────────────────────────────────
 	app.Get("/health", h.HealthCheck)
 
 	// ── API v1 ──────────────────────────────────────────────
->>>>>>> 12f28c3 (Add Swagger docs and API handlers)
 	v1 := app.Group("/api/v1")
 
 	// Universities
 	v1.Get("/universities", h.GetUniversities)
 	v1.Get("/universities/:id", h.GetUniversityByID)
-	v1.Post("/universities/:id/logo", h.UploadLogo)
 
 	// Specialty Groups
 	v1.Get("/groups", h.GetGroups)
