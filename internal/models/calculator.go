@@ -6,11 +6,12 @@ type CalculatorRequest struct {
 	// Score — общий балл ЕНТ абитуриента (0–140).
 	Score int `json:"score" query:"score"`
 
-	// Subject1 — ID первого профильного предмета (например, "math").
-	// Передаётся без префикса таблицы: "math", а не "subject:math".
+	// Subject1 — код первого профильного предмета (например, "math").
+	// Соответствует полю code в таблице subject.
 	Subject1 string `json:"subject1" query:"subject1"`
 
-	// Subject2 — ID второго профильного предмета (например, "physics").
+	// Subject2 — код второго профильного предмета (например, "physics").
+	// Соответствует полю code в таблице subject.
 	Subject2 string `json:"subject2" query:"subject2"`
 
 	// City — фильтр по городу (опционально).

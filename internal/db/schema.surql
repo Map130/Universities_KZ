@@ -203,6 +203,10 @@ DEFINE TABLE OVERWRITE subject SCHEMAFULL
     PERMISSIONS
         FOR select, create, update, delete FULL;
 
+-- Уникальный код предмета ("math", "physics", "geography" и т. д.) --
+-- Используется фронтом как value в <select> и в калькуляторе.
+DEFINE FIELD OVERWRITE code           ON TABLE subject TYPE string;
+
 -- Название (локализация: kz / ru / en) --
 DEFINE FIELD OVERWRITE name           ON TABLE subject TYPE object;
 DEFINE FIELD OVERWRITE name.kz        ON TABLE subject TYPE string;
@@ -214,6 +218,11 @@ DEFINE FIELD OVERWRITE created_at     ON TABLE subject TYPE datetime
     DEFAULT time::now();
 DEFINE FIELD OVERWRITE updated_at     ON TABLE subject TYPE datetime
     VALUE time::now();
+
+-- Уникальный индекс на код предмета --
+DEFINE INDEX OVERWRITE idx_subject_code
+    ON TABLE subject
+    FIELDS code UNIQUE;
 
 -- updated_at обновляется автоматически через VALUE time::now() на поле.
 REMOVE EVENT IF EXISTS ev_subject_updated ON TABLE subject;

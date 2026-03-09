@@ -96,6 +96,11 @@ if [[ "$HAS_SEED" == true ]]; then
         "/api/v1/universities/sdu"
         "/api/v1/groups/b057"
         "/api/v1/groups/b058"
+        # Калькулятор — тяжёлый графовый запрос (LET → requires → specialty → offers)
+        "/api/v1/calculator?score=95&subject1=math&subject2=physics"
+        "/api/v1/calculator?score=120&subject1=math&subject2=physics"
+        "/api/v1/calculator?score=70&subject1=physics&subject2=geography"
+        "/api/v1/calculator?score=100&subject1=math&subject2=physics&city=%D0%90%D0%BB%D0%BC%D0%B0%D1%82%D1%8B"
     )
 fi
 
@@ -116,7 +121,7 @@ printf "╔═══════════════════════
 printf "║   🔥  STRESS TEST — UniversitiesKZ Backend            ║\n"
 printf "╠══════════════════════════════════════════════════════╣\n"
 printf "║   Длительность:    %-4s сек                          ║\n" "$DURATION"
-printf "║   Эндпоинтов:      %-4s                              ║\n" "${#ENDPOINTS[@]}"
+printf "║   Эндпоинтов:      %-4s (вкл. калькулятор)           ║\n" "${#ENDPOINTS[@]}"
 printf "║   Воркеров/эндп:   %-4s                              ║\n" "$CONCURRENCY"
 printf "║   Всего воркеров:  %-4s                              ║\n" "$TOTAL_WORKERS"
 printf "╚══════════════════════════════════════════════════════╝\n"

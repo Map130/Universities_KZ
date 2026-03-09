@@ -12,6 +12,10 @@ type Subject struct {
 	// При создании может быть nil — SurrealDB сгенерирует автоматически.
 	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty"`
 
+	// Уникальный код предмета ("math", "physics", "geography" и т. д.).
+	// Используется фронтом как value в <select> и в параметрах калькулятора.
+	Code string `json:"code" cbor:"code"`
+
 	// Название предмета на трёх языках (kz / ru / en).
 	Name LocalizedName `json:"name" cbor:"name"`
 

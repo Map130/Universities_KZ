@@ -134,6 +134,7 @@ echo ""
 printf "${YELLOW}── 1. Предметы ЕНТ ──────────────────────────────${NC}\n"
 
 sql "UPSERT subject:math SET
+    code = 'math',
     name = {
         kz: 'Математика',
         ru: 'Математика',
@@ -141,6 +142,7 @@ sql "UPSERT subject:math SET
     };" "Математика"
 
 sql "UPSERT subject:physics SET
+    code = 'physics',
     name = {
         kz: 'Физика',
         ru: 'Физика',
@@ -148,6 +150,7 @@ sql "UPSERT subject:physics SET
     };" "Физика"
 
 sql "UPSERT subject:geography SET
+    code = 'geography',
     name = {
         kz: 'География',
         ru: 'География',
@@ -155,6 +158,7 @@ sql "UPSERT subject:geography SET
     };" "География"
 
 sql "UPSERT subject:foreign_lang SET
+    code = 'foreign_lang',
     name = {
         kz: 'Шет тілі',
         ru: 'Иностранный язык',

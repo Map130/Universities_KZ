@@ -199,6 +199,9 @@ definitions:
   github_com_Map130_universities_internal_models.SwaggerSubject:
     description: Предмет ЕНТ
     properties:
+      code:
+        example: math
+        type: string
       created_at:
         example: "2025-01-15T10:30:00Z"
         type: string
@@ -299,13 +302,13 @@ paths:
         name: score
         required: true
         type: integer
-      - description: ID первого профильного предмета (без префикса)
+      - description: Код первого профильного предмета
         example: math
         in: query
         name: subject1
         required: true
         type: string
-      - description: ID второго профильного предмета (без префикса)
+      - description: Код второго профильного предмета
         example: physics
         in: query
         name: subject2

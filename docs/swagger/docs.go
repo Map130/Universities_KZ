@@ -44,7 +44,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "math",
-                        "description": "ID первого профильного предмета (без префикса)",
+                        "description": "Код первого профильного предмета",
                         "name": "subject1",
                         "in": "query",
                         "required": true
@@ -52,7 +52,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "physics",
-                        "description": "ID второго профильного предмета (без префикса)",
+                        "description": "Код второго профильного предмета",
                         "name": "subject2",
                         "in": "query",
                         "required": true
@@ -736,6 +736,10 @@ const docTemplate = `{
             "description": "Предмет ЕНТ",
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "math"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2025-01-15T10:30:00Z"

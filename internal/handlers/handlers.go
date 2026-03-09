@@ -225,8 +225,8 @@ func (h *Handler) GetSubjects(c *fiber.Ctx) error {
 // @Tags         calculator
 // @Produce      json
 // @Param        score     query     int     true   "Балл ЕНТ абитуриента (0–140)"                    example(95)
-// @Param        subject1  query     string  true   "ID первого профильного предмета (без префикса)"   example(math)
-// @Param        subject2  query     string  true   "ID второго профильного предмета (без префикса)"   example(physics)
+// @Param        subject1  query     string  true   "Код первого профильного предмета"                  example(math)
+// @Param        subject2  query     string  true   "Код второго профильного предмета"                  example(physics)
 // @Param        city      query     string  false  "Фильтр по городу"                                 example(Алматы)
 // @Param        lang      query     string  false  "Язык ответа"                                      Enums(kz, ru, en) default(ru)
 // @Success      200       {object}  models.CalculatorResponse

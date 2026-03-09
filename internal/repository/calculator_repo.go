@@ -31,7 +31,7 @@ func NewCalculatorRepository(pool *db.Pool) CalculatorRepository {
 // calculatorBaseQuery — единый графовый запрос калькулятора.
 //
 // Логика:
-//  1. LET $s1, $s2 — RecordID двух профильных предметов.
+//  1. LET $s1, $s2 — находим предметы по уникальному коду (code).
 //  2. LET $groups  — группы ОП, которые требуют ОБА предмета (HAVING count() = 2).
 //  3. LET $specs   — специальности, принадлежащие этим группам.
 //  4. SELECT       — офферы вузов, где min_score <= балл абитуриента,
@@ -39,15 +39,13 @@ func NewCalculatorRepository(pool *db.Pool) CalculatorRepository {
 //
 // Placeholder {{CITY_FILTER}} заменяется на фильтр по городу при необходимости.
 const calculatorBaseQuery = `
-    LET $s1 = type::thing("subject", $subject1);
-    LET $s2 = type::thing("subject", $subject2);
+    LET $s1 = (SELECT VALUE id FROM subject WHERE code = $subject1 LIMIT 1);
+    LET $s2 = (SELECT VALUE id FROM subject WHERE code = $subject2 LIMIT 1);
 
-    LET $groups = (
-        SELECT VALUE in FROM requires
-        WHERE out = $s1 OR out = $s2
-        GROUP BY in
-        HAVING count() = 2
-    );
+    LET $g1 = (SELECT VALUE in FROM requires WHERE out IN $s1);
+    LET $g2 = (SELECT VALUE in FROM requires WHERE out IN $s2);
+
+    LET $groups = array::intersect($g1, $g2);
 
     LET $specs = (
         SELECT VALUE id FROM specialty

@@ -75,6 +75,7 @@ type SwaggerSpecialty struct {
 // @Description Предмет ЕНТ
 type SwaggerSubject struct {
 	ID        string               `json:"id" example:"subject:math"`
+	Code      string               `json:"code" example:"math"`
 	Name      SwaggerLocalizedName `json:"name"`
 	CreatedAt string               `json:"created_at,omitempty" example:"2025-01-15T10:30:00Z"`
 	UpdatedAt string               `json:"updated_at,omitempty" example:"2025-01-15T10:30:00Z"`
