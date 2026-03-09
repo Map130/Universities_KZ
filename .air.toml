@@ -18,6 +18,9 @@ tmp_dir = "tmp"
 
 [build]
 
+  # ── 0. Swagger генерация перед сборкой ─────────────────────
+  pre_cmd = ["swag init --generalInfo cmd/api/main.go --parseDependency --parseInternal --output docs/swagger --quiet"]
+
   # ── 1. Компиляция Go ---------------------------------------
   cmd = "go build -o ./tmp/main ./cmd/api"
 
@@ -39,7 +42,7 @@ tmp_dir = "tmp"
   # ── Что исключить ─────────────────────────────────────────
   # tmp — артефакты билда air
   # .git — понятно
-  exclude_dir = ["tmp", "vendor", "testdata", ".git"]
+  exclude_dir = ["tmp", "vendor", "testdata", ".git", "docs"]
   exclude_regex = ["_test\\.go$"]
   exclude_unchanged = false
 

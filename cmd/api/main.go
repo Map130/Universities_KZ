@@ -39,7 +39,7 @@ func requireEnv(key string) string {
 // @license.name  MIT
 // @license.url   https://opensource.org/licenses/MIT
 
-// @host      localhost:3000
+// @host      localhost:8080
 // @BasePath  /
 
 // @schemes   http https
@@ -100,12 +100,6 @@ func main() {
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelDefault,
 	}))
-
-	// ── Static files (CSS, JS, images) ──────────────────────
-	app.Static("/static", "./static", fiber.Static{
-		Compress:      false, // сжатие через middleware выше, без stale .fiber.gz
-		CacheDuration: 0,     // В dev без кеша; в production выставить 24h+
-	})
 
 	// ── Swagger UI ──────────────────────────────────────────
 	app.Get("/swagger/*", swagger.HandlerDefault)
