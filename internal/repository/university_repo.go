@@ -10,6 +10,7 @@ import (
 	"github.com/surrealdb/surrealdb.go"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/models"
 )
 
@@ -51,12 +52,12 @@ type UniversityRepository interface {
 
 // surrealUniversityRepo — реализация UniversityRepository поверх SurrealDB.
 type surrealUniversityRepo struct {
-	db *surrealdb.DB
+	pool *db.Pool
 }
 
 // NewUniversityRepository создаёт репозиторий вузов.
-func NewUniversityRepository(db *surrealdb.DB) UniversityRepository {
-	return &surrealUniversityRepo{db: db}
+func NewUniversityRepository(pool *db.Pool) UniversityRepository {
+	return &surrealUniversityRepo{pool: pool}
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +65,7 @@ func NewUniversityRepository(db *surrealdb.DB) UniversityRepository {
 // ---------------------------------------------------------------------------
 
 func (r *surrealUniversityRepo) GetAll(ctx context.Context, f models.UniversityFilters) ([]models.University, error) {
+	conn := r.pool.Get()
 	// Динамическое построение SurrealQL-запроса.
 	query := "SELECT * FROM university"
 	vars := map[string]any{}
@@ -121,12 +123,12 @@ func (r *surrealUniversityRepo) GetAll(ctx context.Context, f models.UniversityF
 		vars["offset"] = f.Offset
 	}
 
-	results, err := surrealdb.Query[[]models.University](ctx, r.db, query, vars)
+	results, err := surrealdb.Query[[]models.University](ctx, conn, query, vars)
 	if err != nil {
 		return nil, fmt.Errorf("university.GetAll: query: %w", err)
 	}
 
-	if len(*results) == 0 {
+	if results == nil || len(*results) == 0 {
 		return []models.University{}, nil
 	}
 
@@ -143,9 +145,12 @@ func (r *surrealUniversityRepo) GetAll(ctx context.Context, f models.UniversityF
 // ---------------------------------------------------------------------------
 
 func (r *surrealUniversityRepo) GetByID(ctx context.Context, id surrealmodels.RecordID) (*models.University, error) {
-	result, err := surrealdb.Select[models.University](ctx, r.db, id)
+	result, err := surrealdb.Select[models.University](ctx, r.pool.Get(), id)
 	if err != nil {
 		return nil, fmt.Errorf("university.GetByID: %w", err)
+	}
+	if result == nil {
+		return nil, fmt.Errorf("university.GetByID: not found")
 	}
 
 	return result, nil
@@ -170,7 +175,7 @@ func (r *surrealUniversityRepo) GetWithSpecialties(ctx context.Context, id surre
 	//    FETCH out заменяет RecordID в поле `out` на полный
 	//    объект specialty, что маппится в OfferWithSpecialty.Out.
 	offerResults, err := surrealdb.Query[[]models.OfferWithSpecialty](
-		ctx, r.db,
+		ctx, r.pool.Get(),
 		"SELECT * FROM offers WHERE in = $uni_id FETCH out",
 		map[string]any{"uni_id": id},
 	)
@@ -179,7 +184,7 @@ func (r *surrealUniversityRepo) GetWithSpecialties(ctx context.Context, id surre
 	}
 
 	var offers []models.OfferWithSpecialty
-	if len(*offerResults) > 0 {
+	if offerResults != nil && len(*offerResults) > 0 {
 		first := (*offerResults)[0]
 		if first.Error != nil {
 			return nil, fmt.Errorf("university.GetWithSpecialties: offers: %w", first.Error)
@@ -232,7 +237,7 @@ func (r *surrealUniversityRepo) Create(ctx context.Context, u models.University)
 	// SurrealDB возвращает массив при CREATE на таблицу (Table),
 	// даже если создаётся одна запись. Поэтому десериализуем как []models.University
 	// и берём первый элемент.
-	result, err := surrealdb.Create[[]models.University](ctx, r.db, surrealmodels.Table("university"), data)
+	result, err := surrealdb.Create[[]models.University](ctx, r.pool.Get(), surrealmodels.Table("university"), data)
 	if err != nil {
 		return nil, fmt.Errorf("university.Create: %w", err)
 	}
@@ -273,7 +278,7 @@ func (r *surrealUniversityRepo) Update(ctx context.Context, id surrealmodels.Rec
 	// Кастомный CSS для премиум-вузов.
 	data["custom_css"] = u.CustomCSS
 
-	result, err := surrealdb.Merge[models.University](ctx, r.db, id, data)
+	result, err := surrealdb.Merge[models.University](ctx, r.pool.Get(), id, data)
 	if err != nil {
 		return nil, fmt.Errorf("university.Update: %w", err)
 	}
@@ -286,7 +291,7 @@ func (r *surrealUniversityRepo) Update(ctx context.Context, id surrealmodels.Rec
 // ---------------------------------------------------------------------------
 
 func (r *surrealUniversityRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error {
-	if _, err := surrealdb.Delete[models.University](ctx, r.db, id); err != nil {
+	if _, err := surrealdb.Delete[models.University](ctx, r.pool.Get(), id); err != nil {
 		return fmt.Errorf("university.Delete: %w", err)
 	}
 	return nil
@@ -314,7 +319,7 @@ func (r *surrealUniversityRepo) CreateOffer(
 		},
 	}
 
-	result, err := surrealdb.Relate[models.Offers](ctx, r.db, rel)
+	result, err := surrealdb.Relate[models.Offers](ctx, r.pool.Get(), rel)
 	if err != nil {
 		return nil, fmt.Errorf("university.CreateOffer: %w", err)
 	}
@@ -339,7 +344,7 @@ func (r *surrealUniversityRepo) UpdateOffer(
 		"last_year_threshold": input.LastYearThreshold,
 	}
 
-	result, err := surrealdb.Merge[models.Offers](ctx, r.db, id, data)
+	result, err := surrealdb.Merge[models.Offers](ctx, r.pool.Get(), id, data)
 	if err != nil {
 		return nil, fmt.Errorf("university.UpdateOffer: %w", err)
 	}
@@ -351,7 +356,7 @@ func (r *surrealUniversityRepo) UpdateOffer(
 // ---------------------------------------------------------------------------
 
 func (r *surrealUniversityRepo) DeleteOffer(ctx context.Context, id surrealmodels.RecordID) error {
-	if _, err := surrealdb.Delete[models.Offers](ctx, r.db, id); err != nil {
+	if _, err := surrealdb.Delete[models.Offers](ctx, r.pool.Get(), id); err != nil {
 		return fmt.Errorf("university.DeleteOffer: %w", err)
 	}
 	return nil
@@ -363,7 +368,7 @@ func (r *surrealUniversityRepo) DeleteOffer(ctx context.Context, id surrealmodel
 
 func (r *surrealUniversityRepo) DeleteAllOffers(ctx context.Context, universityID surrealmodels.RecordID) error {
 	_, err := surrealdb.Query[any](
-		ctx, r.db,
+		ctx, r.pool.Get(),
 		"DELETE FROM offers WHERE in = $uni_id",
 		map[string]any{"uni_id": universityID},
 	)

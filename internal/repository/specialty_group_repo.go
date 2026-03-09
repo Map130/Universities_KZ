@@ -7,6 +7,7 @@ import (
 	"github.com/surrealdb/surrealdb.go"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/models"
 )
 
@@ -47,12 +48,12 @@ type SpecialtyGroupRepository interface {
 
 // surrealSpecialtyGroupRepo — реализация поверх SurrealDB.
 type surrealSpecialtyGroupRepo struct {
-	db *surrealdb.DB
+	pool *db.Pool
 }
 
 // NewSpecialtyGroupRepository создаёт репозиторий групп ОП.
-func NewSpecialtyGroupRepository(db *surrealdb.DB) SpecialtyGroupRepository {
-	return &surrealSpecialtyGroupRepo{db: db}
+func NewSpecialtyGroupRepository(pool *db.Pool) SpecialtyGroupRepository {
+	return &surrealSpecialtyGroupRepo{pool: pool}
 }
 
 // ---------------------------------------------------------------------------
@@ -99,12 +100,12 @@ func (r *surrealSpecialtyGroupRepo) GetAll(ctx context.Context, f models.Special
 		vars["offset"] = f.Offset
 	}
 
-	results, err := surrealdb.Query[[]models.SpecialtyGroup](ctx, r.db, query, vars)
+	results, err := surrealdb.Query[[]models.SpecialtyGroup](ctx, r.pool.Get(), query, vars)
 	if err != nil {
 		return nil, fmt.Errorf("specialtyGroup.GetAll: query: %w", err)
 	}
 
-	if len(*results) == 0 {
+	if results == nil || len(*results) == 0 {
 		return []models.SpecialtyGroup{}, nil
 	}
 
@@ -121,9 +122,12 @@ func (r *surrealSpecialtyGroupRepo) GetAll(ctx context.Context, f models.Special
 // ---------------------------------------------------------------------------
 
 func (r *surrealSpecialtyGroupRepo) GetByID(ctx context.Context, id surrealmodels.RecordID) (*models.SpecialtyGroup, error) {
-	result, err := surrealdb.Select[models.SpecialtyGroup](ctx, r.db, id)
+	result, err := surrealdb.Select[models.SpecialtyGroup](ctx, r.pool.Get(), id)
 	if err != nil {
 		return nil, fmt.Errorf("specialtyGroup.GetByID: %w", err)
+	}
+	if result == nil {
+		return nil, fmt.Errorf("specialtyGroup.GetByID: not found")
 	}
 	return result, nil
 }
@@ -134,7 +138,7 @@ func (r *surrealSpecialtyGroupRepo) GetByID(ctx context.Context, id surrealmodel
 
 func (r *surrealSpecialtyGroupRepo) GetByCode(ctx context.Context, code string) (*models.SpecialtyGroup, error) {
 	results, err := surrealdb.Query[[]models.SpecialtyGroup](
-		ctx, r.db,
+		ctx, r.pool.Get(),
 		"SELECT * FROM specialty_group WHERE code = $code LIMIT 1",
 		map[string]any{"code": code},
 	)
@@ -142,7 +146,7 @@ func (r *surrealSpecialtyGroupRepo) GetByCode(ctx context.Context, code string) 
 		return nil, fmt.Errorf("specialtyGroup.GetByCode: query: %w", err)
 	}
 
-	if len(*results) == 0 {
+	if results == nil || len(*results) == 0 {
 		return nil, fmt.Errorf("specialtyGroup.GetByCode: no query results")
 	}
 
@@ -169,7 +173,7 @@ func (r *surrealSpecialtyGroupRepo) GetWithSubjects(ctx context.Context, id surr
 	}
 
 	subjectResults, err := surrealdb.Query[[]models.RequiredSubject](
-		ctx, r.db,
+		ctx, r.pool.Get(),
 		"SELECT * FROM requires WHERE in = $group_id ORDER BY priority ASC FETCH out",
 		map[string]any{"group_id": id},
 	)
@@ -178,7 +182,7 @@ func (r *surrealSpecialtyGroupRepo) GetWithSubjects(ctx context.Context, id surr
 	}
 
 	var subjects []models.RequiredSubject
-	if len(*subjectResults) > 0 {
+	if subjectResults != nil && len(*subjectResults) > 0 {
 		first := (*subjectResults)[0]
 		if first.Error != nil {
 			return nil, nil, fmt.Errorf("specialtyGroup.GetWithSubjects: requires: %w", first.Error)
@@ -205,7 +209,7 @@ func (r *surrealSpecialtyGroupRepo) Create(ctx context.Context, g models.Special
 
 	// SurrealDB возвращает массив при CREATE на таблицу (Table),
 	// даже если создаётся одна запись. Десериализуем как []models.SpecialtyGroup.
-	result, err := surrealdb.Create[[]models.SpecialtyGroup](ctx, r.db, surrealmodels.Table("specialty_group"), data)
+	result, err := surrealdb.Create[[]models.SpecialtyGroup](ctx, r.pool.Get(), surrealmodels.Table("specialty_group"), data)
 	if err != nil {
 		return nil, fmt.Errorf("specialtyGroup.Create: %w", err)
 	}
@@ -226,7 +230,7 @@ func (r *surrealSpecialtyGroupRepo) Update(ctx context.Context, id surrealmodels
 		"name": map[string]any{"kz": g.Name.KZ, "ru": g.Name.RU, "en": g.Name.EN},
 	}
 
-	result, err := surrealdb.Merge[models.SpecialtyGroup](ctx, r.db, id, data)
+	result, err := surrealdb.Merge[models.SpecialtyGroup](ctx, r.pool.Get(), id, data)
 	if err != nil {
 		return nil, fmt.Errorf("specialtyGroup.Update: %w", err)
 	}
@@ -238,7 +242,7 @@ func (r *surrealSpecialtyGroupRepo) Update(ctx context.Context, id surrealmodels
 // ---------------------------------------------------------------------------
 
 func (r *surrealSpecialtyGroupRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error {
-	if _, err := surrealdb.Delete[models.SpecialtyGroup](ctx, r.db, id); err != nil {
+	if _, err := surrealdb.Delete[models.SpecialtyGroup](ctx, r.pool.Get(), id); err != nil {
 		return fmt.Errorf("specialtyGroup.Delete: %w", err)
 	}
 	return nil
@@ -262,7 +266,7 @@ func (r *surrealSpecialtyGroupRepo) CreateRequires(
 		},
 	}
 
-	result, err := surrealdb.Relate[models.Requires](ctx, r.db, rel)
+	result, err := surrealdb.Relate[models.Requires](ctx, r.pool.Get(), rel)
 	if err != nil {
 		return nil, fmt.Errorf("specialtyGroup.CreateRequires: %w", err)
 	}
@@ -274,7 +278,7 @@ func (r *surrealSpecialtyGroupRepo) CreateRequires(
 // ---------------------------------------------------------------------------
 
 func (r *surrealSpecialtyGroupRepo) DeleteRequires(ctx context.Context, id surrealmodels.RecordID) error {
-	if _, err := surrealdb.Delete[models.Requires](ctx, r.db, id); err != nil {
+	if _, err := surrealdb.Delete[models.Requires](ctx, r.pool.Get(), id); err != nil {
 		return fmt.Errorf("specialtyGroup.DeleteRequires: %w", err)
 	}
 	return nil
@@ -286,7 +290,7 @@ func (r *surrealSpecialtyGroupRepo) DeleteRequires(ctx context.Context, id surre
 
 func (r *surrealSpecialtyGroupRepo) DeleteAllRequires(ctx context.Context, groupID surrealmodels.RecordID) error {
 	_, err := surrealdb.Query[any](
-		ctx, r.db,
+		ctx, r.pool.Get(),
 		"DELETE FROM requires WHERE in = $group_id",
 		map[string]any{"group_id": groupID},
 	)

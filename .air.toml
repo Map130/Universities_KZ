@@ -1,12 +1,11 @@
 #:schema https://json.schemastore.org/any.json
 
 # ─────────────────────────────────────────────────────────────
-#  Air — Live Reload для Go + Tailwind CSS
+#  Air — Live Reload для Go
 #
 #  Что происходит при изменении файла:
-#    1. pre_cmd  → npx tailwindcss пересобирает CSS
-#    2. cmd      → go build компилирует бинарник
-#    3. bin      → запускается ./tmp/main
+#    1. cmd      → go build компилирует бинарник
+#    2. bin      → запускается ./tmp/main
 #
 #  Tailwind watch НЕ нужен отдельно — air сам триггерит
 #  пересборку CSS при изменении .html / .go файлов.
@@ -18,36 +17,32 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  # ── 1. Пересборка Tailwind CSS перед компиляцией Go ────────
-  pre_cmd = ["find ./static -name '*.fiber.gz' -delete", "npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify"]
 
-  # ── 2. Компиляция Go (noauth для dev без Google OAuth) ─────
-  cmd = "go build -tags noauth -o ./tmp/main ./cmd/api"
+  # ── 0. Swagger генерация перед сборкой ─────────────────────
+  pre_cmd = ["swag init --generalInfo cmd/api/main.go --parseDependency --parseInternal --output docs/swagger --quiet"]
 
-  # ── 3. Запуск бинарника ────────────────────────────────────
+  # ── 1. Компиляция Go ---------------------------------------
+  cmd = "go build -o ./tmp/main ./cmd/api"
+
+  # ── 2. Запуск бинарника ────────────────────────────────────
   bin = "./tmp/main"
   args_bin = []
   full_bin = ""
 
   # ── Какие директории отслеживать ───────────────────────────
-  # views   — HTML-шаблоны (layout, universities/*, stub)
-  # static  — CSS input, картинки, JS
   # cmd     — main.go, точка входа
   # internal— handlers, models, repo, auth, storage
   # configs — конфиги (пока пусто, но пусть следит)
-  include_dir = ["cmd", "internal", "configs", "views", "static"]
+  include_dir = ["cmd", "internal", "configs"]
 
   # ── Какие расширения триггерят rebuild ─────────────────────
   include_ext = ["go", "html", "css", "js", "tmpl", "tpl", "surql"]
   include_file = ["tailwind.config.js"]
 
   # ── Что исключить ─────────────────────────────────────────
-  # output.css — результат сборки Tailwind, не нужно зацикливаться
-  # node_modules — npm пакеты, не наш код
   # tmp — артефакты билда air
   # .git — понятно
-  exclude_dir = ["tmp", "vendor", "testdata", "node_modules", ".git"]
-  exclude_file = ["static/css/output.css"]
+  exclude_dir = ["tmp", "vendor", "testdata", ".git", "docs"]
   exclude_regex = ["_test\\.go$"]
   exclude_unchanged = false
 

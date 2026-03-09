@@ -1,0 +1,847 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API для поиска университетов, специальностей и образовательных программ Казахстана.\nПредоставляет данные о вузах, группах ОП, специальностях и предметах ЕНТ.",
+        "title": "Universities KZ API",
+        "contact": {
+            "name": "Map130 Team",
+            "url": "https://github.com/Map130/universities"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/calculator": {
+            "get": {
+                "description": "По баллу ЕНТ и двум профильным предметам возвращает список вузов и специальностей, куда абитуриент может поступить. Поле grant=true означает высокие шансы на грант (балл \u003e= проходного прошлого года).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator"
+                ],
+                "summary": "Калькулятор поступления",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 95,
+                        "description": "Балл ЕНТ абитуриента (0–140)",
+                        "name": "score",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "math",
+                        "description": "Код первого профильного предмета",
+                        "name": "subject1",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "physics",
+                        "description": "Код второго профильного предмета",
+                        "name": "subject2",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "Алматы",
+                        "description": "Фильтр по городу",
+                        "name": "city",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "kz",
+                            "ru",
+                            "en"
+                        ],
+                        "type": "string",
+                        "default": "ru",
+                        "description": "Язык ответа",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.CalculatorResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/groups": {
+            "get": {
+                "description": "Возвращает список групп ОП с поддержкой полнотекстового поиска и пагинации. К группе привязаны требования к предметам ЕНТ.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "Получить список групп образовательных программ",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "Информационные технологии",
+                        "description": "Полнотекстовый поиск по названию",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "kz",
+                            "ru",
+                            "en"
+                        ],
+                        "type": "string",
+                        "default": "ru",
+                        "description": "Язык поиска",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Максимальное число записей",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Смещение для пагинации",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/groups/{id}": {
+            "get": {
+                "description": "Возвращает группу образовательных программ вместе с привязанными предметами ЕНТ (через графовую связь requires)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "Получить группу ОП по ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "b057",
+                        "description": "ID группы ОП (без префикса таблицы)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/specialties": {
+            "get": {
+                "description": "Возвращает список образовательных программ с поддержкой фильтрации по коду группы, полнотекстовому поиску и пагинации",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "specialties"
+                ],
+                "summary": "Получить список специальностей",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "Программная инженерия",
+                        "description": "Полнотекстовый поиск по названию",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "kz",
+                            "ru",
+                            "en"
+                        ],
+                        "type": "string",
+                        "default": "ru",
+                        "description": "Язык поиска",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "B057",
+                        "description": "Фильтр по коду группы ОП",
+                        "name": "group_code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Максимальное число записей",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Смещение для пагинации",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialty"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subjects": {
+            "get": {
+                "description": "Возвращает полный список предметов Единого национального тестирования",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subjects"
+                ],
+                "summary": "Получить список предметов ЕНТ",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSubject"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/universities": {
+            "get": {
+                "description": "Возвращает список университетов Казахстана с поддержкой фильтрации по городу, типу, полнотекстовому поиску и пагинации",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "universities"
+                ],
+                "summary": "Получить список вузов",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "Алматы",
+                        "description": "Фильтр по городу (точное совпадение)",
+                        "name": "city",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "public",
+                            "private"
+                        ],
+                        "type": "string",
+                        "description": "Тип вуза",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "МУИТ",
+                        "description": "Полнотекстовый поиск по названию",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "kz",
+                            "ru",
+                            "en"
+                        ],
+                        "type": "string",
+                        "default": "ru",
+                        "description": "Язык поиска",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Максимальное число записей",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Смещение для пагинации",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/universities/{id}": {
+            "get": {
+                "description": "Возвращает детальную информацию о вузе, включая список предлагаемых специальностей (через графовую связь offers)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "universities"
+                ],
+                "summary": "Получить вуз по ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "abc123",
+                        "description": "ID вуза (без префикса таблицы)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversityDetail"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Возвращает статус сервиса и подключения к БД",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Проверка состояния сервиса",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.HealthResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_Map130_universities_internal_models.CalculatorResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Map130_universities_internal_models.CalculatorResult"
+                    }
+                },
+                "score": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.CalculatorResult": {
+            "type": "object",
+            "properties": {
+                "grant": {
+                    "type": "boolean"
+                },
+                "group": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.GroupShort"
+                },
+                "offer": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.OfferInfo"
+                },
+                "specialty": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SpecialtyShort"
+                },
+                "university": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.UniversityShort"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.ErrorResponse": {
+            "description": "Стандартный ответ при ошибке",
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "record not found"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.GroupShort": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.HealthResponse": {
+            "description": "Ответ healthcheck-эндпоинта",
+            "type": "object",
+            "properties": {
+                "db": {
+                    "type": "string",
+                    "example": "connected"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "online"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.LocalizedName": {
+            "type": "object",
+            "properties": {
+                "en": {
+                    "type": "string"
+                },
+                "kz": {
+                    "type": "string"
+                },
+                "ru": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.OfferInfo": {
+            "type": "object",
+            "properties": {
+                "grant_count": {
+                    "type": "integer"
+                },
+                "last_year_threshold": {
+                    "type": "integer"
+                },
+                "min_score": {
+                    "type": "integer"
+                },
+                "quota_grant_count": {
+                    "type": "integer"
+                },
+                "tuition_fee": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SpecialtyShort": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects": {
+            "description": "Группа ОП с привязанными предметами ЕНТ",
+            "type": "object",
+            "properties": {
+                "group": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup"
+                },
+                "subjects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerRequiredSubject"
+                    }
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerLocalizedName": {
+            "description": "Локализованное название (kz / ru / en)",
+            "type": "object",
+            "properties": {
+                "en": {
+                    "type": "string",
+                    "example": "Information Technologies"
+                },
+                "kz": {
+                    "type": "string",
+                    "example": "Ақпараттық технологиялар"
+                },
+                "ru": {
+                    "type": "string",
+                    "example": "Информационные технологии"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty": {
+            "description": "Предложение вуза (связь offers) с развёрнутой специальностью",
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "grant_count": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "id": {
+                    "type": "string",
+                    "example": "offers:abc123"
+                },
+                "in": {
+                    "type": "string",
+                    "example": "university:abc123"
+                },
+                "last_year_threshold": {
+                    "type": "integer",
+                    "example": 85
+                },
+                "min_score": {
+                    "type": "integer",
+                    "example": 80
+                },
+                "out": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialty"
+                },
+                "quota_grant_count": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "tuition_fee": {
+                    "type": "integer",
+                    "example": 1500000
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerRequiredSubject": {
+            "description": "Требуемый предмет ЕНТ для группы ОП",
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "requires:abc123"
+                },
+                "in": {
+                    "type": "string",
+                    "example": "specialty_group:b057"
+                },
+                "out": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSubject"
+                },
+                "priority": {
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "example": 1
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerSpecialty": {
+            "description": "Специальность / образовательная программа",
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "6B06101"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "group": {
+                    "type": "string",
+                    "example": "specialty_group:b057"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "specialty:xyz789"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup": {
+            "description": "Группа образовательных программ",
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "B057"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "specialty_group:b057"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerSubject": {
+            "description": "Предмет ЕНТ",
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "math"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "subject:math"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerUniversity": {
+            "description": "Университет Казахстана",
+            "type": "object",
+            "properties": {
+                "abbr": {
+                    "type": "string",
+                    "example": "МУИТ"
+                },
+                "city": {
+                    "type": "string",
+                    "example": "Алматы"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "custom_css": {
+                    "type": "string",
+                    "example": ""
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Ведущий IT-вуз Казахстана"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "university:abc123"
+                },
+                "logo_url": {
+                    "type": "string",
+                    "example": "http://localhost:9000/logos/abc.png"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private"
+                    ],
+                    "example": "public"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "website": {
+                    "type": "string",
+                    "example": "https://muit.edu.kz"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SwaggerUniversityDetail": {
+            "description": "Детальная информация о вузе с его специальностями",
+            "type": "object",
+            "properties": {
+                "offers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty"
+                    }
+                },
+                "university": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.UniversityShort": {
+            "type": "object",
+            "properties": {
+                "abbr": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

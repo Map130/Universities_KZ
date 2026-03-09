@@ -7,6 +7,7 @@ import (
 	"github.com/surrealdb/surrealdb.go"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/models"
 )
 
@@ -24,15 +25,15 @@ type SubjectRepository interface {
 }
 
 type surrealSubjectRepo struct {
-	db *surrealdb.DB
+	pool *db.Pool
 }
 
-func NewSubjectRepository(db *surrealdb.DB) SubjectRepository {
-	return &surrealSubjectRepo{db: db}
+func NewSubjectRepository(pool *db.Pool) SubjectRepository {
+	return &surrealSubjectRepo{pool: pool}
 }
 
 func (r *surrealSubjectRepo) GetAll(ctx context.Context) ([]models.Subject, error) {
-	result, err := surrealdb.Select[[]models.Subject](ctx, r.db, surrealmodels.Table("subject"))
+	result, err := surrealdb.Select[[]models.Subject](ctx, r.pool.Get(), surrealmodels.Table("subject"))
 	if err != nil {
 		return nil, fmt.Errorf("subject.GetAll: %w", err)
 	}
@@ -43,9 +44,12 @@ func (r *surrealSubjectRepo) GetAll(ctx context.Context) ([]models.Subject, erro
 }
 
 func (r *surrealSubjectRepo) GetByID(ctx context.Context, id surrealmodels.RecordID) (*models.Subject, error) {
-	result, err := surrealdb.Select[models.Subject](ctx, r.db, id)
+	result, err := surrealdb.Select[models.Subject](ctx, r.pool.Get(), id)
 	if err != nil {
 		return nil, fmt.Errorf("subject.GetByID: %w", err)
+	}
+	if result == nil {
+		return nil, fmt.Errorf("subject.GetByID: not found")
 	}
 	return result, nil
 }
@@ -56,7 +60,7 @@ func (r *surrealSubjectRepo) Create(ctx context.Context, s models.Subject) (*mod
 	}
 	// SurrealDB возвращает массив при CREATE на таблицу (Table),
 	// даже если создаётся одна запись. Десериализуем как []models.Subject.
-	result, err := surrealdb.Create[[]models.Subject](ctx, r.db, surrealmodels.Table("subject"), data)
+	result, err := surrealdb.Create[[]models.Subject](ctx, r.pool.Get(), surrealmodels.Table("subject"), data)
 	if err != nil {
 		return nil, fmt.Errorf("subject.Create: %w", err)
 	}
@@ -71,7 +75,7 @@ func (r *surrealSubjectRepo) Update(ctx context.Context, id surrealmodels.Record
 	data := map[string]any{
 		"name": map[string]any{"kz": s.Name.KZ, "ru": s.Name.RU, "en": s.Name.EN},
 	}
-	result, err := surrealdb.Merge[models.Subject](ctx, r.db, id, data)
+	result, err := surrealdb.Merge[models.Subject](ctx, r.pool.Get(), id, data)
 	if err != nil {
 		return nil, fmt.Errorf("subject.Update: %w", err)
 	}
@@ -79,7 +83,7 @@ func (r *surrealSubjectRepo) Update(ctx context.Context, id surrealmodels.Record
 }
 
 func (r *surrealSubjectRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error {
-	if _, err := surrealdb.Delete[models.Subject](ctx, r.db, id); err != nil {
+	if _, err := surrealdb.Delete[models.Subject](ctx, r.pool.Get(), id); err != nil {
 		return fmt.Errorf("subject.Delete: %w", err)
 	}
 	return nil
@@ -97,7 +101,7 @@ func (r *surrealSubjectRepo) FindUniversitiesBySubject(ctx context.Context, subj
 	`
 
 	results, err := surrealdb.Query[[]models.University](
-		ctx, r.db, query,
+		ctx, r.pool.Get(), query,
 		map[string]any{"subject_id": subjectID},
 	)
 	if err != nil {

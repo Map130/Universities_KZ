@@ -481,13 +481,6 @@ erDiagram
         datetime updated_at
     }
 
-    allowed_admins {
-        string id PK
-        string email UK "validated email"
-        string name "optional"
-        datetime created_at
-    }
-
     offers {
         string id PK
         record in FK "-> university"

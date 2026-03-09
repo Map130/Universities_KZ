@@ -7,6 +7,7 @@ import (
 	"github.com/surrealdb/surrealdb.go"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/models"
 )
 
@@ -37,12 +38,12 @@ type SpecialtyRepository interface {
 
 // surrealSpecialtyRepo — реализация SpecialtyRepository поверх SurrealDB.
 type surrealSpecialtyRepo struct {
-	db *surrealdb.DB
+	pool *db.Pool
 }
 
 // NewSpecialtyRepository создаёт репозиторий специальностей.
-func NewSpecialtyRepository(db *surrealdb.DB) SpecialtyRepository {
-	return &surrealSpecialtyRepo{db: db}
+func NewSpecialtyRepository(pool *db.Pool) SpecialtyRepository {
+	return &surrealSpecialtyRepo{pool: pool}
 }
 
 // ---------------------------------------------------------------------------
@@ -98,12 +99,12 @@ func (r *surrealSpecialtyRepo) GetAll(ctx context.Context, f models.SpecialtyFil
 		vars["offset"] = f.Offset
 	}
 
-	results, err := surrealdb.Query[[]models.Specialty](ctx, r.db, query, vars)
+	results, err := surrealdb.Query[[]models.Specialty](ctx, r.pool.Get(), query, vars)
 	if err != nil {
 		return nil, fmt.Errorf("specialty.GetAll: query: %w", err)
 	}
 
-	if len(*results) == 0 {
+	if results == nil || len(*results) == 0 {
 		return []models.Specialty{}, nil
 	}
 
@@ -120,9 +121,12 @@ func (r *surrealSpecialtyRepo) GetAll(ctx context.Context, f models.SpecialtyFil
 // ---------------------------------------------------------------------------
 
 func (r *surrealSpecialtyRepo) GetByID(ctx context.Context, id surrealmodels.RecordID) (*models.Specialty, error) {
-	result, err := surrealdb.Select[models.Specialty](ctx, r.db, id)
+	result, err := surrealdb.Select[models.Specialty](ctx, r.pool.Get(), id)
 	if err != nil {
 		return nil, fmt.Errorf("specialty.GetByID: %w", err)
+	}
+	if result == nil {
+		return nil, fmt.Errorf("specialty.GetByID: not found")
 	}
 	return result, nil
 }
@@ -133,7 +137,7 @@ func (r *surrealSpecialtyRepo) GetByID(ctx context.Context, id surrealmodels.Rec
 
 func (r *surrealSpecialtyRepo) GetByCode(ctx context.Context, code string) (*models.Specialty, error) {
 	results, err := surrealdb.Query[[]models.Specialty](
-		ctx, r.db,
+		ctx, r.pool.Get(),
 		"SELECT * FROM specialty WHERE code = $code LIMIT 1",
 		map[string]any{"code": code},
 	)
@@ -141,7 +145,7 @@ func (r *surrealSpecialtyRepo) GetByCode(ctx context.Context, code string) (*mod
 		return nil, fmt.Errorf("specialty.GetByCode: query: %w", err)
 	}
 
-	if len(*results) == 0 {
+	if results == nil || len(*results) == 0 {
 		return nil, fmt.Errorf("specialty.GetByCode: no query results")
 	}
 
@@ -171,7 +175,7 @@ func (r *surrealSpecialtyRepo) GetWithSubjects(ctx context.Context, id surrealmo
 	// 2. Предметы ЕНТ привязаны к группе ОП, а не к специальности.
 	//    Запрашиваем requires через spec.Group (record link на specialty_group).
 	subjectResults, err := surrealdb.Query[[]models.RequiredSubject](
-		ctx, r.db,
+		ctx, r.pool.Get(),
 		"SELECT * FROM requires WHERE in = $group_id ORDER BY priority ASC FETCH out",
 		map[string]any{"group_id": spec.Group},
 	)
@@ -180,7 +184,7 @@ func (r *surrealSpecialtyRepo) GetWithSubjects(ctx context.Context, id surrealmo
 	}
 
 	var subjects []models.RequiredSubject
-	if len(*subjectResults) > 0 {
+	if subjectResults != nil && len(*subjectResults) > 0 {
 		first := (*subjectResults)[0]
 		if first.Error != nil {
 			return nil, nil, fmt.Errorf("specialty.GetWithSubjects: requires: %w", first.Error)
@@ -208,7 +212,7 @@ func (r *surrealSpecialtyRepo) Create(ctx context.Context, s models.Specialty) (
 
 	// SurrealDB возвращает массив при CREATE на таблицу (Table),
 	// даже если создаётся одна запись. Десериализуем как []models.Specialty.
-	result, err := surrealdb.Create[[]models.Specialty](ctx, r.db, surrealmodels.Table("specialty"), data)
+	result, err := surrealdb.Create[[]models.Specialty](ctx, r.pool.Get(), surrealmodels.Table("specialty"), data)
 	if err != nil {
 		return nil, fmt.Errorf("specialty.Create: %w", err)
 	}
@@ -230,7 +234,7 @@ func (r *surrealSpecialtyRepo) Update(ctx context.Context, id surrealmodels.Reco
 		"group": s.Group,
 	}
 
-	result, err := surrealdb.Merge[models.Specialty](ctx, r.db, id, data)
+	result, err := surrealdb.Merge[models.Specialty](ctx, r.pool.Get(), id, data)
 	if err != nil {
 		return nil, fmt.Errorf("specialty.Update: %w", err)
 	}
@@ -242,7 +246,7 @@ func (r *surrealSpecialtyRepo) Update(ctx context.Context, id surrealmodels.Reco
 // ---------------------------------------------------------------------------
 
 func (r *surrealSpecialtyRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error {
-	if _, err := surrealdb.Delete[models.Specialty](ctx, r.db, id); err != nil {
+	if _, err := surrealdb.Delete[models.Specialty](ctx, r.pool.Get(), id); err != nil {
 		return fmt.Errorf("specialty.Delete: %w", err)
 	}
 	return nil
