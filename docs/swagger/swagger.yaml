@@ -40,18 +40,6 @@ definitions:
         example: Информационные технологии
         type: string
     type: object
-  github_com_Map130_universities_internal_models.SwaggerLogoUploadResponse:
-    description: Результат загрузки логотипа
-    properties:
-      logo_url:
-        example: http://localhost:9000/logos/abc.png
-        type: string
-      message:
-        example: logo uploaded successfully
-        type: string
-      university:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity'
-    type: object
   github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty:
     description: Предложение вуза (связь offers) с развёрнутой специальностью
     properties:
@@ -453,46 +441,6 @@ paths:
           schema:
             $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
       summary: Получить вуз по ID
-      tags:
-      - universities
-  /api/v1/universities/{id}/logo:
-    post:
-      consumes:
-      - multipart/form-data
-      description: 'Загружает изображение логотипа вуза в MinIO/S3. Поддерживаемые
-        форматы: JPEG, PNG, WebP, SVG. Максимальный размер: 5 МБ.'
-      parameters:
-      - description: ID вуза (без префикса таблицы)
-        example: abc123
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Файл логотипа
-        in: formData
-        name: logo
-        required: true
-        type: file
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLogoUploadResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
-      summary: Загрузить логотип вуза
       tags:
       - universities
   /health:

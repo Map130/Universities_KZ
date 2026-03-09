@@ -123,11 +123,3 @@ type SwaggerGroupWithSubjects struct {
 	Group    SwaggerSpecialtyGroup    `json:"group"`
 	Subjects []SwaggerRequiredSubject `json:"subjects"`
 }
-
-// SwaggerLogoUploadResponse — ответ POST /universities/:id/logo.
-// @Description Результат загрузки логотипа
-type SwaggerLogoUploadResponse struct {
-	Message    string            `json:"message" example:"logo uploaded successfully"`
-	LogoURL    string            `json:"logo_url" example:"http://localhost:9000/logos/abc.png"`
-	University SwaggerUniversity `json:"university"`
-}

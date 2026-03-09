@@ -3,15 +3,12 @@ package handlers
 
 import (
 	"fmt"
-	"log"
-	"path"
 
 	"github.com/gofiber/fiber/v2"
 	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/Map130/universities/internal/models"
 	"github.com/Map130/universities/internal/repository"
-	"github.com/Map130/universities/internal/storage"
 )
 
 // Handler объединяет все зависимости для HTTP-хендлеров.
@@ -20,7 +17,6 @@ type Handler struct {
 	GroupRepo   repository.SpecialtyGroupRepository
 	SpecRepo    repository.SpecialtyRepository
 	SubjectRepo repository.SubjectRepository
-	Store       storage.Uploader
 }
 
 // NewHandler создаёт Handler с заданными зависимостями.
@@ -29,14 +25,12 @@ func NewHandler(
 	groupRepo repository.SpecialtyGroupRepository,
 	specRepo repository.SpecialtyRepository,
 	subjectRepo repository.SubjectRepository,
-	store storage.Uploader,
 ) *Handler {
 	return &Handler{
 		UniRepo:     uniRepo,
 		GroupRepo:   groupRepo,
 		SpecRepo:    specRepo,
 		SubjectRepo: subjectRepo,
-		Store:       store,
 	}
 }
 
@@ -110,66 +104,6 @@ func (h *Handler) GetUniversityByID(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(detail)
-}
-
-// UploadLogo godoc
-// @Summary      Загрузить логотип вуза
-// @Description  Загружает изображение логотипа вуза в MinIO/S3. Поддерживаемые форматы: JPEG, PNG, WebP, SVG. Максимальный размер: 5 МБ.
-// @Tags         universities
-// @Accept       multipart/form-data
-// @Produce      json
-// @Param        id    path      string  true  "ID вуза (без префикса таблицы)"  example(abc123)
-// @Param        logo  formData  file    true  "Файл логотипа"
-// @Success      200   {object}  models.SwaggerLogoUploadResponse
-// @Failure      400   {object}  models.ErrorResponse
-// @Failure      404   {object}  models.ErrorResponse
-// @Failure      500   {object}  models.ErrorResponse
-// @Router       /api/v1/universities/{id}/logo [post]
-func (h *Handler) UploadLogo(c *fiber.Ctx) error {
-	// 1. Парсим ID вуза.
-	id, err := parseRecordID("university", c.Params("id"))
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	// 2. Проверяем, что вуз существует.
-	uni, err := h.UniRepo.GetByID(c.Context(), id)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "university not found"})
-	}
-
-	// 3. Извлекаем файл из multipart-формы.
-	file, err := c.FormFile("logo")
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing 'logo' file in form"})
-	}
-
-	// 4. Загружаем изображение в MinIO.
-	logoURL, err := h.Store.UploadImage(c.Context(), file)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	// 5. Удаляем старый логотип, если был.
-	if uni.LogoURL != nil && *uni.LogoURL != "" {
-		oldFileName := path.Base(*uni.LogoURL)
-		if delErr := h.Store.DeleteFile(c.Context(), storage.BucketLogos, oldFileName); delErr != nil {
-			log.Printf("[upload] warning: failed to delete old logo %s: %v", oldFileName, delErr)
-		}
-	}
-
-	// 6. Обновляем logo_url в базе данных.
-	uni.LogoURL = &logoURL
-	updated, err := h.UniRepo.Update(c.Context(), id, *uni)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("logo uploaded but DB update failed: %v", err)})
-	}
-
-	return c.JSON(fiber.Map{
-		"message":    "logo uploaded successfully",
-		"logo_url":   logoURL,
-		"university": updated,
-	})
 }
 
 // ────────────────────────────────────────────────────────────────────────────

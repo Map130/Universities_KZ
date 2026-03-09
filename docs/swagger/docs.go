@@ -351,64 +351,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/universities/{id}/logo": {
-            "post": {
-                "description": "Загружает изображение логотипа вуза в MinIO/S3. Поддерживаемые форматы: JPEG, PNG, WebP, SVG. Максимальный размер: 5 МБ.",
-                "consumes": [
-                    "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "universities"
-                ],
-                "summary": "Загрузить логотип вуза",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "abc123",
-                        "description": "ID вуза (без префикса таблицы)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Файл логотипа",
-                        "name": "logo",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLogoUploadResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/health": {
             "get": {
                 "description": "Возвращает статус сервиса и подключения к БД",
@@ -485,23 +427,6 @@ const docTemplate = `{
                 "ru": {
                     "type": "string",
                     "example": "Информационные технологии"
-                }
-            }
-        },
-        "github_com_Map130_universities_internal_models.SwaggerLogoUploadResponse": {
-            "description": "Результат загрузки логотипа",
-            "type": "object",
-            "properties": {
-                "logo_url": {
-                    "type": "string",
-                    "example": "http://localhost:9000/logos/abc.png"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "logo uploaded successfully"
-                },
-                "university": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity"
                 }
             }
         },
