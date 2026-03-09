@@ -123,3 +123,59 @@ type SwaggerGroupWithSubjects struct {
 	Group    SwaggerSpecialtyGroup    `json:"group"`
 	Subjects []SwaggerRequiredSubject `json:"subjects"`
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Calculator
+// ────────────────────────────────────────────────────────────────────────────
+
+// SwaggerCalculatorResponse — ответ калькулятора поступления.
+// @Description Результат расчёта доступных вузов и специальностей по баллу ЕНТ
+type SwaggerCalculatorResponse struct {
+	Score   int                       `json:"score" example:"95"`
+	Results []SwaggerCalculatorResult `json:"results"`
+	Total   int                       `json:"total" example:"12"`
+}
+
+// SwaggerCalculatorResult — один элемент результата калькулятора.
+// @Description Доступный вуз и специальность для абитуриента
+type SwaggerCalculatorResult struct {
+	University SwaggerUniversityShort `json:"university"`
+	Specialty  SwaggerSpecialtyShort  `json:"specialty"`
+	Group      SwaggerGroupShort      `json:"group"`
+	Offer      SwaggerOfferInfo       `json:"offer"`
+	Grant      bool                   `json:"grant" example:"true"`
+}
+
+// SwaggerUniversityShort — краткая информация о вузе.
+// @Description Краткая информация о вузе
+type SwaggerUniversityShort struct {
+	Name    SwaggerLocalizedName `json:"name"`
+	Abbr    string               `json:"abbr" example:"МУИТ"`
+	City    string               `json:"city" example:"Алматы"`
+	Type    string               `json:"type" example:"public" enums:"public,private"`
+	LogoURL *string              `json:"logo_url,omitempty" example:"http://localhost:9000/logos/abc.png"`
+}
+
+// SwaggerSpecialtyShort — краткая информация о специальности.
+// @Description Краткая информация о специальности
+type SwaggerSpecialtyShort struct {
+	Code string               `json:"code" example:"6B06101"`
+	Name SwaggerLocalizedName `json:"name"`
+}
+
+// SwaggerGroupShort — краткая информация о группе ОП.
+// @Description Краткая информация о группе образовательных программ
+type SwaggerGroupShort struct {
+	Code string               `json:"code" example:"B057"`
+	Name SwaggerLocalizedName `json:"name"`
+}
+
+// SwaggerOfferInfo — условия поступления.
+// @Description Условия поступления (гранты, стоимость, проходной балл)
+type SwaggerOfferInfo struct {
+	GrantCount        int `json:"grant_count" example:"50"`
+	QuotaGrantCount   int `json:"quota_grant_count" example:"10"`
+	TuitionFee        int `json:"tuition_fee" example:"1500000"`
+	MinScore          int `json:"min_score" example:"50"`
+	LastYearThreshold int `json:"last_year_threshold" example:"90"`
+}

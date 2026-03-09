@@ -1,11 +1,42 @@
 basePath: /
 definitions:
+  github_com_Map130_universities_internal_models.CalculatorResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/github_com_Map130_universities_internal_models.CalculatorResult'
+        type: array
+      score:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_Map130_universities_internal_models.CalculatorResult:
+    properties:
+      grant:
+        type: boolean
+      group:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.GroupShort'
+      offer:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.OfferInfo'
+      specialty:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SpecialtyShort'
+      university:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.UniversityShort'
+    type: object
   github_com_Map130_universities_internal_models.ErrorResponse:
     description: Стандартный ответ при ошибке
     properties:
       error:
         example: record not found
         type: string
+    type: object
+  github_com_Map130_universities_internal_models.GroupShort:
+    properties:
+      code:
+        type: string
+      name:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.LocalizedName'
     type: object
   github_com_Map130_universities_internal_models.HealthResponse:
     description: Ответ healthcheck-эндпоинта
@@ -16,6 +47,35 @@ definitions:
       status:
         example: online
         type: string
+    type: object
+  github_com_Map130_universities_internal_models.LocalizedName:
+    properties:
+      en:
+        type: string
+      kz:
+        type: string
+      ru:
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.OfferInfo:
+    properties:
+      grant_count:
+        type: integer
+      last_year_threshold:
+        type: integer
+      min_score:
+        type: integer
+      quota_grant_count:
+        type: integer
+      tuition_fee:
+        type: integer
+    type: object
+  github_com_Map130_universities_internal_models.SpecialtyShort:
+    properties:
+      code:
+        type: string
+      name:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.LocalizedName'
     type: object
   github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects:
     description: Группа ОП с привязанными предметами ЕНТ
@@ -200,7 +260,20 @@ definitions:
       university:
         $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity'
     type: object
-host: localhost:3000
+  github_com_Map130_universities_internal_models.UniversityShort:
+    properties:
+      abbr:
+        type: string
+      city:
+        type: string
+      logo_url:
+        type: string
+      name:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.LocalizedName'
+      type:
+        type: string
+    type: object
+host: localhost:8080
 info:
   contact:
     name: Map130 Team
@@ -214,6 +287,62 @@ info:
   title: Universities KZ API
   version: "1.0"
 paths:
+  /api/v1/calculator:
+    get:
+      description: По баллу ЕНТ и двум профильным предметам возвращает список вузов
+        и специальностей, куда абитуриент может поступить. Поле grant=true означает
+        высокие шансы на грант (балл >= проходного прошлого года).
+      parameters:
+      - description: Балл ЕНТ абитуриента (0–140)
+        example: 95
+        in: query
+        name: score
+        required: true
+        type: integer
+      - description: ID первого профильного предмета (без префикса)
+        example: math
+        in: query
+        name: subject1
+        required: true
+        type: string
+      - description: ID второго профильного предмета (без префикса)
+        example: physics
+        in: query
+        name: subject2
+        required: true
+        type: string
+      - description: Фильтр по городу
+        example: Алматы
+        in: query
+        name: city
+        type: string
+      - default: ru
+        description: Язык ответа
+        enum:
+        - kz
+        - ru
+        - en
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.CalculatorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+      summary: Калькулятор поступления
+      tags:
+      - calculator
   /api/v1/groups:
     get:
       description: Возвращает список групп ОП с поддержкой полнотекстового поиска

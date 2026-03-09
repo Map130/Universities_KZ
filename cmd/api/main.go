@@ -80,11 +80,12 @@ func main() {
 	groupRepo := repository.NewSpecialtyGroupRepository(pool)
 	specRepo := repository.NewSpecialtyRepository(pool)
 	subjectRepo := repository.NewSubjectRepository(pool)
+	calcRepo := repository.NewCalculatorRepository(pool)
 
 	log.Println("[app] repositories initialized")
 
 	// ── Handler (все хендлеры в одном месте) ─────────────────
-	h := handlers.NewHandler(uniRepo, groupRepo, specRepo, subjectRepo)
+	h := handlers.NewHandler(uniRepo, groupRepo, specRepo, subjectRepo, calcRepo)
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Universities KZ v1.0",
@@ -123,6 +124,9 @@ func main() {
 
 	// Subjects
 	v1.Get("/subjects", h.GetSubjects)
+
+	// Calculator
+	v1.Get("/calculator", h.GetCalculatorResults)
 
 	// ── Graceful Shutdown ───────────────────────────────────
 	quit := make(chan os.Signal, 1)

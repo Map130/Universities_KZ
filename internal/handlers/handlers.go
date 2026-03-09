@@ -17,6 +17,7 @@ type Handler struct {
 	GroupRepo   repository.SpecialtyGroupRepository
 	SpecRepo    repository.SpecialtyRepository
 	SubjectRepo repository.SubjectRepository
+	CalcRepo    repository.CalculatorRepository
 }
 
 // NewHandler создаёт Handler с заданными зависимостями.
@@ -25,12 +26,14 @@ func NewHandler(
 	groupRepo repository.SpecialtyGroupRepository,
 	specRepo repository.SpecialtyRepository,
 	subjectRepo repository.SubjectRepository,
+	calcRepo repository.CalculatorRepository,
 ) *Handler {
 	return &Handler{
 		UniRepo:     uniRepo,
 		GroupRepo:   groupRepo,
 		SpecRepo:    specRepo,
 		SubjectRepo: subjectRepo,
+		CalcRepo:    calcRepo,
 	}
 }
 
@@ -210,6 +213,66 @@ func (h *Handler) GetSubjects(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(subjects)
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Calculator
+// ────────────────────────────────────────────────────────────────────────────
+
+// GetCalculatorResults godoc
+// @Summary      Калькулятор поступления
+// @Description  По баллу ЕНТ и двум профильным предметам возвращает список вузов и специальностей, куда абитуриент может поступить. Поле grant=true означает высокие шансы на грант (балл >= проходного прошлого года).
+// @Tags         calculator
+// @Produce      json
+// @Param        score     query     int     true   "Балл ЕНТ абитуриента (0–140)"                    example(95)
+// @Param        subject1  query     string  true   "ID первого профильного предмета (без префикса)"   example(math)
+// @Param        subject2  query     string  true   "ID второго профильного предмета (без префикса)"   example(physics)
+// @Param        city      query     string  false  "Фильтр по городу"                                 example(Алматы)
+// @Param        lang      query     string  false  "Язык ответа"                                      Enums(kz, ru, en) default(ru)
+// @Success      200       {object}  models.CalculatorResponse
+// @Failure      400       {object}  models.ErrorResponse
+// @Failure      500       {object}  models.ErrorResponse
+// @Router       /api/v1/calculator [get]
+func (h *Handler) GetCalculatorResults(c *fiber.Ctx) error {
+	score := c.QueryInt("score", -1)
+	if score < 0 || score > 140 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "score обязателен и должен быть от 0 до 140",
+		})
+	}
+
+	subject1 := c.Query("subject1")
+	subject2 := c.Query("subject2")
+	if subject1 == "" || subject2 == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "subject1 и subject2 обязательны",
+		})
+	}
+
+	if subject1 == subject2 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "subject1 и subject2 должны быть разными предметами",
+		})
+	}
+
+	req := models.CalculatorRequest{
+		Score:    score,
+		Subject1: subject1,
+		Subject2: subject2,
+		City:     c.Query("city"),
+		Lang:     c.Query("lang"),
+	}
+
+	results, err := h.CalcRepo.Calculate(c.Context(), req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(models.CalculatorResponse{
+		Score:   score,
+		Results: results,
+		Total:   len(results),
+	})
 }
 
 // ────────────────────────────────────────────────────────────────────────────

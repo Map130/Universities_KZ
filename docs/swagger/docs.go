@@ -22,6 +22,83 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/calculator": {
+            "get": {
+                "description": "По баллу ЕНТ и двум профильным предметам возвращает список вузов и специальностей, куда абитуриент может поступить. Поле grant=true означает высокие шансы на грант (балл \u003e= проходного прошлого года).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator"
+                ],
+                "summary": "Калькулятор поступления",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 95,
+                        "description": "Балл ЕНТ абитуриента (0–140)",
+                        "name": "score",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "math",
+                        "description": "ID первого профильного предмета (без префикса)",
+                        "name": "subject1",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "physics",
+                        "description": "ID второго профильного предмета (без префикса)",
+                        "name": "subject2",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "Алматы",
+                        "description": "Фильтр по городу",
+                        "name": "city",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "kz",
+                            "ru",
+                            "en"
+                        ],
+                        "type": "string",
+                        "default": "ru",
+                        "description": "Язык ответа",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.CalculatorResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/groups": {
             "get": {
                 "description": "Возвращает список групп ОП с поддержкой полнотекстового поиска и пагинации. К группе привязаны требования к предметам ЕНТ.",
@@ -373,6 +450,43 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "github_com_Map130_universities_internal_models.CalculatorResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Map130_universities_internal_models.CalculatorResult"
+                    }
+                },
+                "score": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.CalculatorResult": {
+            "type": "object",
+            "properties": {
+                "grant": {
+                    "type": "boolean"
+                },
+                "group": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.GroupShort"
+                },
+                "offer": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.OfferInfo"
+                },
+                "specialty": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SpecialtyShort"
+                },
+                "university": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.UniversityShort"
+                }
+            }
+        },
         "github_com_Map130_universities_internal_models.ErrorResponse": {
             "description": "Стандартный ответ при ошибке",
             "type": "object",
@@ -380,6 +494,17 @@ const docTemplate = `{
                 "error": {
                     "type": "string",
                     "example": "record not found"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.GroupShort": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
                 }
             }
         },
@@ -394,6 +519,51 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "online"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.LocalizedName": {
+            "type": "object",
+            "properties": {
+                "en": {
+                    "type": "string"
+                },
+                "kz": {
+                    "type": "string"
+                },
+                "ru": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.OfferInfo": {
+            "type": "object",
+            "properties": {
+                "grant_count": {
+                    "type": "integer"
+                },
+                "last_year_threshold": {
+                    "type": "integer"
+                },
+                "min_score": {
+                    "type": "integer"
+                },
+                "quota_grant_count": {
+                    "type": "integer"
+                },
+                "tuition_fee": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Map130_universities_internal_models.SpecialtyShort": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
                 }
             }
         },
@@ -650,6 +820,26 @@ const docTemplate = `{
                     "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity"
                 }
             }
+        },
+        "github_com_Map130_universities_internal_models.UniversityShort": {
+            "type": "object",
+            "properties": {
+                "abbr": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
         }
     }
 }`
@@ -657,7 +847,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:3000",
+	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{"http", "https"},
 	Title:            "Universities KZ API",
