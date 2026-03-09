@@ -11,7 +11,11 @@ import (
 	"syscall"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/gofiber/fiber/v2/middleware/session"
+=======
+	"runtime"
+>>>>>>> d258f37 (Add SurrealDB connection pool and use it)
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
@@ -34,7 +38,7 @@ func requireEnv(key string) string {
 }
 
 func main() {
-	cfg := db.Config{
+	dbCfg := db.Config{
 		URL:       requireEnv("SURREAL_URL"),
 		User:      requireEnv("SURREAL_USER"),
 		Pass:      requireEnv("SURREAL_PASS"),
@@ -54,12 +58,23 @@ func main() {
 
 	ctx := context.Background()
 
-	surrealDB, err := db.Connect(ctx, cfg)
+	// ── Пул подключений к SurrealDB ─────────────────────────
+	// SurrealDB Go SDK v1.x использует одно WS-соединение на *surrealdb.DB.
+	// Под конкурентной нагрузкой одно соединение захлёбывается.
+	// Пул из 2×CPU соединений решает проблему.
+	poolSize := runtime.NumCPU() * 2
+	if poolSize < 4 {
+		poolSize = 4
+	}
+	pool, err := db.NewPool(ctx, db.PoolConfig{
+		Config: dbCfg,
+		Size:   poolSize,
+	})
 	if err != nil {
-		log.Fatalf("Ошибка подключения к SurrealDB: %v", err)
+		log.Fatalf("Ошибка создания пула подключений к SurrealDB: %v", err)
 	}
 
-	if err := db.RunMigrations(ctx, surrealDB); err != nil {
+	if err := db.RunMigrationsOnPool(ctx, pool); err != nil {
 		log.Fatalf("Ошибка миграции схемы: %v", err)
 	}
 
@@ -69,12 +84,20 @@ func main() {
 		log.Fatalf("Ошибка подключения к MinIO: %v", err)
 	}
 
+<<<<<< HEAD
 	// Инициализация репозиториев
 	uniRepo := repository.NewUniversityRepository(surrealDB)
 	groupRepo := repository.NewSpecialtyGroupRepository(surrealDB)
 	specRepo := repository.NewSpecialtyRepository(surrealDB)
 	subjectRepo := repository.NewSubjectRepository(surrealDB)
 	adminRepo := repository.NewAdminRepository(surrealDB)
+=======
+	// Инициализация репозиториев (используют пул подключений)
+	uniRepo := repository.NewUniversityRepository(pool)
+	groupRepo := repository.NewSpecialtyGroupRepository(pool)
+	specRepo := repository.NewSpecialtyRepository(pool)
+	subjectRepo := repository.NewSubjectRepository(pool)
+>>>>>>> d258f37 (Add SurrealDB connection pool and use it)
 
 	log.Println("[app] repositories initialized")
 
@@ -278,8 +301,8 @@ func main() {
 	if err := app.ShutdownWithContext(shutdownCtx); err != nil {
 		log.Printf("[app] server shutdown error: %v", err)
 	}
-	if err := surrealDB.Close(shutdownCtx); err != nil {
-		log.Printf("[app] db close error: %v", err)
+	if err := pool.Close(shutdownCtx); err != nil {
+		log.Printf("[app] db pool close error: %v", err)
 	}
 
 	log.Println("[app] stopped")
