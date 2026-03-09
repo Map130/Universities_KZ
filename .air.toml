@@ -37,12 +37,9 @@ tmp_dir = "tmp"
   include_file = ["tailwind.config.js"]
 
   # ── Что исключить ─────────────────────────────────────────
-  # output.css — результат сборки Tailwind, не нужно зацикливаться
-  # node_modules — npm пакеты, не наш код
   # tmp — артефакты билда air
   # .git — понятно
-  exclude_dir = ["tmp", "vendor", "testdata", "node_modules", ".git"]
-  exclude_file = ["static/css/output.css"]
+  exclude_dir = ["tmp", "vendor", "testdata", ".git"]
   exclude_regex = ["_test\\.go$"]
   exclude_unchanged = false
 
