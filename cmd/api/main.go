@@ -2,31 +2,34 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-
-	"path"
+	"runtime"
 	"syscall"
 	"time"
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 	"github.com/gofiber/fiber/v2/middleware/session"
 =======
 	"runtime"
 >>>>>>> d258f37 (Add SurrealDB connection pool and use it)
 
+=======
+>>>>>>> 12f28c3 (Add Swagger docs and API handlers)
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
-	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
+	"github.com/gofiber/swagger"
 
 	"github.com/Map130/universities/internal/admin"
 	"github.com/Map130/universities/internal/auth"
 	"github.com/Map130/universities/internal/db"
-	"github.com/Map130/universities/internal/models"
+	"github.com/Map130/universities/internal/handlers"
 	"github.com/Map130/universities/internal/repository"
 	"github.com/Map130/universities/internal/storage"
+
+	_ "github.com/Map130/universities/docs/swagger"
 )
 
 func requireEnv(key string) string {
@@ -37,6 +40,21 @@ func requireEnv(key string) string {
 	return value
 }
 
+// @title           Universities KZ API
+// @version         1.0
+// @description     API для поиска университетов, специальностей и образовательных программ Казахстана.
+// @description     Предоставляет данные о вузах, группах ОП, специальностях и предметах ЕНТ.
+
+// @contact.name   Map130 Team
+// @contact.url    https://github.com/Map130/universities
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:3000
+// @BasePath  /
+
+// @schemes   http https
 func main() {
 	dbCfg := db.Config{
 		URL:       requireEnv("SURREAL_URL"),
@@ -101,6 +119,7 @@ func main() {
 
 	log.Println("[app] repositories initialized")
 
+<<<<<<< HEAD
 	// ── Google OAuth 2.0 ────────────────────────────────────
 	// При сборке с тегом noauth (go build -tags noauth) аутентификация
 	// полностью отключена: OAuth не инициализируется, сессия создаётся
@@ -119,6 +138,10 @@ func main() {
 		sessionStore = auth.NewSessionStore(authCfg.SessionSecret)
 		log.Println("[app] Google OAuth initialized")
 	}
+=======
+	// ── Handler (все хендлеры в одном месте) ─────────────────
+	h := handlers.NewHandler(uniRepo, groupRepo, specRepo, subjectRepo, store)
+>>>>>>> 12f28c3 (Add Swagger docs and API handlers)
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Universities KZ v1.0",
@@ -141,10 +164,10 @@ func main() {
 		CacheDuration: 0,     // В dev без кеша; в production выставить 24h+
 	})
 
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "online", "db": "connected"})
-	})
+	// ── Swagger UI ──────────────────────────────────────────
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
+<<<<<<< HEAD
 	// ── Auth routes (публичные) ─────────────────────────────
 	// В noauth-билде OAuth-роуты не регистрируются (они не нужны).
 	if !auth.IsNoAuth() {
@@ -169,116 +192,28 @@ func main() {
 
 	log.Println("[app] admin panel initialized at /admin")
 
+=======
+	// ── Health ──────────────────────────────────────────────
+	app.Get("/health", h.HealthCheck)
+
+	// ── API v1 ──────────────────────────────────────────────
+>>>>>>> 12f28c3 (Add Swagger docs and API handlers)
 	v1 := app.Group("/api/v1")
 
-	// ── Universities ────────────────────────────────────────
-	v1.Get("/universities", func(c *fiber.Ctx) error {
-		unis, err := uniRepo.GetAll(c.Context(), defaultUniversityFilters())
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(unis)
-	})
+	// Universities
+	v1.Get("/universities", h.GetUniversities)
+	v1.Get("/universities/:id", h.GetUniversityByID)
+	v1.Post("/universities/:id/logo", h.UploadLogo)
 
-	v1.Get("/universities/:id", func(c *fiber.Ctx) error {
-		id, err := parseRecordID("university", c.Params("id"))
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-		}
-		detail, err := uniRepo.GetWithSpecialties(c.Context(), id)
-		if err != nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(detail)
-	})
+	// Specialty Groups
+	v1.Get("/groups", h.GetGroups)
+	v1.Get("/groups/:id", h.GetGroupByID)
 
-	// ── Specialty Groups ────────────────────────────────────
-	v1.Get("/groups", func(c *fiber.Ctx) error {
-		groups, err := groupRepo.GetAll(c.Context(), models.SpecialtyGroupFilters{Limit: 100})
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(groups)
-	})
+	// Specialties
+	v1.Get("/specialties", h.GetSpecialties)
 
-	v1.Get("/groups/:id", func(c *fiber.Ctx) error {
-		id, err := parseRecordID("specialty_group", c.Params("id"))
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-		}
-		group, subjects, err := groupRepo.GetWithSubjects(c.Context(), id)
-		if err != nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(fiber.Map{"group": group, "subjects": subjects})
-	})
-
-	// ── Specialties ─────────────────────────────────────────
-	v1.Get("/specialties", func(c *fiber.Ctx) error {
-		specs, err := specRepo.GetAll(c.Context(), defaultSpecialtyFilters())
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(specs)
-	})
-
-	// ── Subjects ────────────────────────────────────────────
-	v1.Get("/subjects", func(c *fiber.Ctx) error {
-		subjects, err := subjectRepo.GetAll(c.Context())
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(subjects)
-	})
-
-	// ── Upload logo ─────────────────────────────────────────
-	v1.Post("/universities/:id/logo", func(c *fiber.Ctx) error {
-		// 1. Парсим ID вуза.
-		id, err := parseRecordID("university", c.Params("id"))
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-		}
-
-		// 2. Проверяем, что вуз существует.
-		uni, err := uniRepo.GetByID(c.Context(), id)
-		if err != nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "university not found"})
-		}
-
-		// 3. Извлекаем файл из multipart-формы.
-		file, err := c.FormFile("logo")
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing 'logo' file in form"})
-		}
-
-		// 4. Загружаем изображение в MinIO.
-		logoURL, err := store.UploadImage(c.Context(), file)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-		}
-
-		// 5. Удаляем старый логотип, если был.
-		if uni.LogoURL != nil && *uni.LogoURL != "" {
-			oldFileName := path.Base(*uni.LogoURL)
-			// Ошибку удаления логируем, но не блокируем запрос.
-			if delErr := store.DeleteFile(c.Context(), storage.BucketLogos, oldFileName); delErr != nil {
-				log.Printf("[upload] warning: failed to delete old logo %s: %v", oldFileName, delErr)
-			}
-		}
-
-		// 6. Обновляем logo_url в базе данных.
-		uni.LogoURL = &logoURL
-		updated, err := uniRepo.Update(c.Context(), id, *uni)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("logo uploaded but DB update failed: %v", err)})
-		}
-
-		return c.JSON(fiber.Map{
-			"message":    "logo uploaded successfully",
-			"logo_url":   logoURL,
-			"university": updated,
-		})
-	})
+	// Subjects
+	v1.Get("/subjects", h.GetSubjects)
 
 	// ── Graceful Shutdown ───────────────────────────────────
 	quit := make(chan os.Signal, 1)
@@ -291,6 +226,7 @@ func main() {
 	}()
 
 	log.Printf("[app] listening on :%s", appPort)
+	log.Printf("[app] Swagger UI available at http://localhost:%s/swagger/index.html", appPort)
 
 	<-quit
 	log.Println("[app] shutting down...")
@@ -306,19 +242,4 @@ func main() {
 	}
 
 	log.Println("[app] stopped")
-}
-
-func defaultUniversityFilters() models.UniversityFilters {
-	return models.UniversityFilters{Limit: 50}
-}
-
-func defaultSpecialtyFilters() models.SpecialtyFilters {
-	return models.SpecialtyFilters{Limit: 50}
-}
-
-func parseRecordID(table, id string) (surrealmodels.RecordID, error) {
-	if id == "" {
-		return surrealmodels.RecordID{}, fmt.Errorf("empty record ID")
-	}
-	return surrealmodels.NewRecordID(table, id), nil
 }

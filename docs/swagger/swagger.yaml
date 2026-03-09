@@ -1,0 +1,514 @@
+basePath: /
+definitions:
+  github_com_Map130_universities_internal_models.ErrorResponse:
+    description: Стандартный ответ при ошибке
+    properties:
+      error:
+        example: record not found
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.HealthResponse:
+    description: Ответ healthcheck-эндпоинта
+    properties:
+      db:
+        example: connected
+        type: string
+      status:
+        example: online
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects:
+    description: Группа ОП с привязанными предметами ЕНТ
+    properties:
+      group:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup'
+      subjects:
+        items:
+          $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerRequiredSubject'
+        type: array
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerLocalizedName:
+    description: Локализованное название (kz / ru / en)
+    properties:
+      en:
+        example: Information Technologies
+        type: string
+      kz:
+        example: Ақпараттық технологиялар
+        type: string
+      ru:
+        example: Информационные технологии
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerLogoUploadResponse:
+    description: Результат загрузки логотипа
+    properties:
+      logo_url:
+        example: http://localhost:9000/logos/abc.png
+        type: string
+      message:
+        example: logo uploaded successfully
+        type: string
+      university:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity'
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty:
+    description: Предложение вуза (связь offers) с развёрнутой специальностью
+    properties:
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      grant_count:
+        example: 25
+        type: integer
+      id:
+        example: offers:abc123
+        type: string
+      in:
+        example: university:abc123
+        type: string
+      last_year_threshold:
+        example: 85
+        type: integer
+      min_score:
+        example: 80
+        type: integer
+      out:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialty'
+      quota_grant_count:
+        example: 5
+        type: integer
+      tuition_fee:
+        example: 1500000
+        type: integer
+      updated_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerRequiredSubject:
+    description: Требуемый предмет ЕНТ для группы ОП
+    properties:
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      id:
+        example: requires:abc123
+        type: string
+      in:
+        example: specialty_group:b057
+        type: string
+      out:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSubject'
+      priority:
+        enum:
+        - 1
+        - 2
+        example: 1
+        type: integer
+      updated_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerSpecialty:
+    description: Специальность / образовательная программа
+    properties:
+      code:
+        example: 6B06101
+        type: string
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      group:
+        example: specialty_group:b057
+        type: string
+      id:
+        example: specialty:xyz789
+        type: string
+      name:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName'
+      updated_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup:
+    description: Группа образовательных программ
+    properties:
+      code:
+        example: B057
+        type: string
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      id:
+        example: specialty_group:b057
+        type: string
+      name:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName'
+      updated_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerSubject:
+    description: Предмет ЕНТ
+    properties:
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      id:
+        example: subject:math
+        type: string
+      name:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName'
+      updated_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerUniversity:
+    description: Университет Казахстана
+    properties:
+      abbr:
+        example: МУИТ
+        type: string
+      city:
+        example: Алматы
+        type: string
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      custom_css:
+        example: ""
+        type: string
+      description:
+        example: Ведущий IT-вуз Казахстана
+        type: string
+      id:
+        example: university:abc123
+        type: string
+      logo_url:
+        example: http://localhost:9000/logos/abc.png
+        type: string
+      name:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName'
+      type:
+        enum:
+        - public
+        - private
+        example: public
+        type: string
+      updated_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      website:
+        example: https://muit.edu.kz
+        type: string
+    type: object
+  github_com_Map130_universities_internal_models.SwaggerUniversityDetail:
+    description: Детальная информация о вузе с его специальностями
+    properties:
+      offers:
+        items:
+          $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty'
+        type: array
+      university:
+        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity'
+    type: object
+host: localhost:3000
+info:
+  contact:
+    name: Map130 Team
+    url: https://github.com/Map130/universities
+  description: |-
+    API для поиска университетов, специальностей и образовательных программ Казахстана.
+    Предоставляет данные о вузах, группах ОП, специальностях и предметах ЕНТ.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Universities KZ API
+  version: "1.0"
+paths:
+  /api/v1/groups:
+    get:
+      description: Возвращает список групп ОП с поддержкой полнотекстового поиска
+        и пагинации. К группе привязаны требования к предметам ЕНТ.
+      parameters:
+      - description: Полнотекстовый поиск по названию
+        example: Информационные технологии
+        in: query
+        name: search
+        type: string
+      - default: ru
+        description: Язык поиска
+        enum:
+        - kz
+        - ru
+        - en
+        in: query
+        name: lang
+        type: string
+      - default: 100
+        description: Максимальное число записей
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение для пагинации
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+      summary: Получить список групп образовательных программ
+      tags:
+      - groups
+  /api/v1/groups/{id}:
+    get:
+      description: Возвращает группу образовательных программ вместе с привязанными
+        предметами ЕНТ (через графовую связь requires)
+      parameters:
+      - description: ID группы ОП (без префикса таблицы)
+        example: b057
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+      summary: Получить группу ОП по ID
+      tags:
+      - groups
+  /api/v1/specialties:
+    get:
+      description: Возвращает список образовательных программ с поддержкой фильтрации
+        по коду группы, полнотекстовому поиску и пагинации
+      parameters:
+      - description: Полнотекстовый поиск по названию
+        example: Программная инженерия
+        in: query
+        name: search
+        type: string
+      - default: ru
+        description: Язык поиска
+        enum:
+        - kz
+        - ru
+        - en
+        in: query
+        name: lang
+        type: string
+      - description: Фильтр по коду группы ОП
+        example: B057
+        in: query
+        name: group_code
+        type: string
+      - default: 50
+        description: Максимальное число записей
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение для пагинации
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialty'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+      summary: Получить список специальностей
+      tags:
+      - specialties
+  /api/v1/subjects:
+    get:
+      description: Возвращает полный список предметов Единого национального тестирования
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSubject'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+      summary: Получить список предметов ЕНТ
+      tags:
+      - subjects
+  /api/v1/universities:
+    get:
+      description: Возвращает список университетов Казахстана с поддержкой фильтрации
+        по городу, типу, полнотекстовому поиску и пагинации
+      parameters:
+      - description: Фильтр по городу (точное совпадение)
+        example: Алматы
+        in: query
+        name: city
+        type: string
+      - description: Тип вуза
+        enum:
+        - public
+        - private
+        in: query
+        name: type
+        type: string
+      - description: Полнотекстовый поиск по названию
+        example: МУИТ
+        in: query
+        name: search
+        type: string
+      - default: ru
+        description: Язык поиска
+        enum:
+        - kz
+        - ru
+        - en
+        in: query
+        name: lang
+        type: string
+      - default: 50
+        description: Максимальное число записей
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение для пагинации
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+      summary: Получить список вузов
+      tags:
+      - universities
+  /api/v1/universities/{id}:
+    get:
+      description: Возвращает детальную информацию о вузе, включая список предлагаемых
+        специальностей (через графовую связь offers)
+      parameters:
+      - description: ID вуза (без префикса таблицы)
+        example: abc123
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversityDetail'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+      summary: Получить вуз по ID
+      tags:
+      - universities
+  /api/v1/universities/{id}/logo:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Загружает изображение логотипа вуза в MinIO/S3. Поддерживаемые
+        форматы: JPEG, PNG, WebP, SVG. Максимальный размер: 5 МБ.'
+      parameters:
+      - description: ID вуза (без префикса таблицы)
+        example: abc123
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Файл логотипа
+        in: formData
+        name: logo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLogoUploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+      summary: Загрузить логотип вуза
+      tags:
+      - universities
+  /health:
+    get:
+      description: Возвращает статус сервиса и подключения к БД
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Map130_universities_internal_models.HealthResponse'
+      summary: Проверка состояния сервиса
+      tags:
+      - health
+schemes:
+- http
+- https
+swagger: "2.0"
