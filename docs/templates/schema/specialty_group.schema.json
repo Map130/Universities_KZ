@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Specialty Group Schema",
+  "description": "JSON Schema for a specialty group (группа образовательных программ) including ENT subjects.",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "The unique code of the specialty group, e.g., 'B057'"
+    },
+    "name": {
+      "type": "object",
+      "description": "Localized name of the specialty group",
+      "properties": {
+        "ru": { "type": "string" },
+        "kz": { "type": "string" },
+        "en": { "type": "string" }
+      },
+      "required": ["ru", "kz"]
+    },
+    "subjects": {
+      "type": "array",
+      "description": "List of required subjects for this specialty group",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "object",
+            "properties": {
+              "ru": { "type": "string" },
+              "kz": { "type": "string" },
+              "en": { "type": "string" }
+            },
+            "required": ["ru", "kz"]
+          },
+          "order": {
+            "type": "integer",
+            "description": "Subject order (e.g., 1 for primary, 2 for secondary)"
+          }
+        },
+        "required": ["name", "order"]
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Information about data collection and source",
+      "properties": {
+        "source_system": { "type": "string" },
+        "source_url": { "type": "string" },
+        "collected_at": { "type": "string", "format": "date-time" },
+        "schema_version": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "required": ["code", "name", "subjects"]
+}
