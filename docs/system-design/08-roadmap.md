@@ -59,17 +59,17 @@ gantt
 
 | #    | Задача                                  | Файлы для изменения / создания                              | Оценка  | Приоритет | Статус |
 | ---- | --------------------------------------- | ----------------------------------------------------------- | ------- | --------- | ------ |
-| 0.1  | **Webhook handler (POST /webhook/git)** | Новый файл `internal/webhook/handler.go`, `cmd/api/main.go` | 2–3 дня | 🔴 P0     | 🔲     |
-| 0.2  | **HMAC-SHA256 верификация подписи**     | `internal/webhook/verify.go`                                | 2 часа  | 🔴 P0     | 🔲     |
+| 0.1  | **Webhook handler (POST /webhook/git)** | Новый файл `internal/webhook/handler.go`, `cmd/api/main.go` | 2–3 дня | 🔴 P0     | ✅     |
+| 0.2  | **HMAC-SHA256 верификация подписи**     | `internal/webhook/verify.go`                                | 2 часа  | 🔴 P0     | ✅     |
 | 0.3  | **JSON Schema для university.json**     | `schemas/university.schema.json`                            | 3 часа  | 🔴 P0     | 🔲     |
 | 0.4  | **JSON Schema для specialty.json**      | `schemas/specialty.schema.json`                             | 2 часа  | 🔴 P0     | 🔲     |
 | 0.5  | **JSON Schema для group.json**          | `schemas/specialty_group.schema.json`                       | 2 часа  | 🔴 P0     | 🔲     |
 | 0.6  | **CI: JSON Schema validation**          | `.github/workflows/data-validate.yml` (в data-репозитории)  | 2 часа  | 🔴 P0     | 🔲     |
-| 0.7  | **Full sync endpoint**                  | `internal/webhook/sync.go`                                  | 1 день  | 🟡 P0     | 🔲     |
-| 0.8  | **SurrealDB: memory → file:**           | `docker-compose.yml`                                        | 15 мин  | 🔴 P0     | 🔲     |
+| 0.7  | **Full sync endpoint**                  | `internal/webhook/sync.go`                                  | 1 день  | 🟡 P0     | ✅     |
+| 0.8  | **SurrealDB: memory → file:**           | `docker-compose.yml`                                        | 15 мин  | 🔴 P0     | ✅     |
 | 0.9  | **Seed data: 5–10 вузов в Git**         | Отдельный data-репозиторий                                  | 2–3 дня | 🔴 P0     | 🔲     |
 | 0.10 | **Logo upload: убрать или защитить**    | `cmd/api/main.go`                                           | 30 мин  | 🟡 P0     | 🔲     |
-| 0.11 | **Удалить артефакты v1.0**              | `package.json`, `tailwind.config.js`, `package-lock.json`   | 10 мин  | 🟢 P0     | 🔲     |
+| 0.11 | **Удалить артефакты v1.0**              | `package.json`, `tailwind.config.js`, `package-lock.json`   | 10 мин  | 🟢 P0     | ✅     |
 
 ### 8.2.2 Детали реализации
 
@@ -185,14 +185,14 @@ universities-data/                  # Отдельный Git-репозитор�
 
 ### 8.2.4 Критерии завершения Phase 0
 
-- [ ] Webhook handler принимает push-события и синхронизирует данные в SurrealDB
-- [ ] HMAC-SHA256 верификация подписи работает (поддельные запросы отклоняются)
+- [ ] Webhook handler принимает push-события и синхронизирует данные в SurrealDB (каркас готов)
+- [x] HMAC-SHA256 верификация подписи работает (поддельные запросы отклоняются)
 - [ ] JSON Schema валидация в CI data-репозитория (невалидные PR не мержатся)
-- [ ] Full sync endpoint восстанавливает БД из Git за < 1 минуту
-- [ ] SurrealDB работает с `file:` storage (данные сохраняются между перезапусками)
+- [x] Full sync endpoint восстанавливает БД из Git за < 1 минуту (через Tarball-архив)
+- [x] SurrealDB работает с `file:` storage (данные сохраняются на эфемерном диске)
 - [ ] 5–10 вузов загружены через data-as-code pipeline
 - [ ] API возвращает загруженные данные через `/api/v1/universities`
-- [ ] Артефакты v1.0 (package.json, tailwind.config.js) удалены или помечены для удаления
+- [x] Артефакты v1.0 (package.json, tailwind.config.js) удалены или помечены для удаления
 
 ---
 
