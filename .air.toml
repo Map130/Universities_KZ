@@ -37,7 +37,7 @@ tmp_dir = "tmp"
 
   # ── Какие расширения триггерят rebuild ─────────────────────
   include_ext = ["go", "html", "css", "js", "tmpl", "tpl", "surql"]
-  include_file = ["tailwind.config.js"]
+  include_file = []
 
   # ── Что исключить ─────────────────────────────────────────
   # tmp — артефакты билда air

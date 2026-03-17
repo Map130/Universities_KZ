@@ -5,9 +5,12 @@ services:
     container_name: universities_db
     ports:
       - "8000:8000"
-    command: start --log debug --user ${SURREAL_USER} --pass ${SURREAL_PASS} memory # Для начала в памяти, потом прикрутишь volume
+    command: start --log info --user ${SURREAL_USER} --pass ${SURREAL_PASS} file:/data/surreal.db
+    volumes:
+      - surreal_data:/data
     restart: always
 
 volumes:
+  surreal_data:
   caddy_data:
   caddy_config:
