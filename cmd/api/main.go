@@ -16,6 +16,7 @@ import (
 	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/handlers"
 	"github.com/Map130/universities/internal/repository"
+	"github.com/Map130/universities/internal/webhook"
 
 	_ "github.com/Map130/universities/docs/swagger"
 )
@@ -127,6 +128,38 @@ func main() {
 
 	// Calculator
 	v1.Get("/calculator", h.GetCalculatorResults)
+
+	// ── Startup Sync (Data as Code) ─────────────────────────
+	githubOwner := os.Getenv("GITHUB_OWNER")
+	githubRepo := os.Getenv("GITHUB_REPO")
+	githubBranch := os.Getenv("GITHUB_BRANCH")
+
+	if githubOwner != "" && githubRepo != "" && githubBranch != "" {
+		log.Println("[app] starting initial data sync from GitHub...")
+		gitClient := webhook.NewGitClient(
+			os.Getenv("GITHUB_TOKEN"),
+			githubOwner,
+			githubRepo,
+			githubBranch,
+		)
+
+		syncCtx, syncCancel := context.WithTimeout(ctx, 5*time.Minute)
+
+		tarStream, err := gitClient.FetchTarball(syncCtx)
+		if err != nil {
+			log.Printf("[app] Ошибка загрузки данных из Git: %v", err)
+		} else {
+			if err := webhook.ProcessTarball(syncCtx, tarStream, nil); err != nil {
+				log.Printf("[app] Ошибка обработки данных из Git: %v", err)
+			} else {
+				log.Println("[app] initial data sync completed successfully")
+			}
+			tarStream.Close()
+		}
+		syncCancel()
+	} else {
+		log.Println("[app] skipping GitHub sync: missing GITHUB_OWNER, GITHUB_REPO, or GITHUB_BRANCH")
+	}
 
 	// ── Graceful Shutdown ───────────────────────────────────
 	quit := make(chan os.Signal, 1)

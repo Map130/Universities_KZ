@@ -126,3 +126,31 @@ func (c *GitClient) ListAllDataFiles(ctx context.Context) ([]string, error) {
 
 	return files, nil
 }
+
+// FetchTarball downloads the entire repository as a tar.gz archive stream.
+// The caller is responsible for closing the returned io.ReadCloser.
+func (c *GitClient) FetchTarball(ctx context.Context) (io.ReadCloser, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s", c.Owner, c.Repository, c.Branch)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.Token != "" {
+		req.Header.Set("Authorization", "token "+c.Token)
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3.raw")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("failed to fetch tarball: status %d", resp.StatusCode)
+	}
+
+	return resp.Body, nil
+}
