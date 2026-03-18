@@ -43,6 +43,18 @@ func requireEnv(key string) string {
 // @host      localhost:8080
 // @BasePath  /
 
+type webhookReposImpl struct {
+	uni     repository.UniversityRepository
+	spec    repository.SpecialtyRepository
+	group   repository.SpecialtyGroupRepository
+	subject repository.SubjectRepository
+}
+
+func (w *webhookReposImpl) Universities() repository.UniversityRepository { return w.uni }
+func (w *webhookReposImpl) Specialties() repository.SpecialtyRepository   { return w.spec }
+func (w *webhookReposImpl) Groups() repository.SpecialtyGroupRepository   { return w.group }
+func (w *webhookReposImpl) Subjects() repository.SubjectRepository        { return w.subject }
+
 // @schemes   http https
 func main() {
 	dbCfg := db.Config{
@@ -149,7 +161,13 @@ func main() {
 		if err != nil {
 			log.Printf("[app] Ошибка загрузки данных из Git: %v", err)
 		} else {
-			if err := webhook.ProcessTarball(syncCtx, tarStream, nil); err != nil {
+			reposImpl := &webhookReposImpl{
+				uni:     uniRepo,
+				spec:    specRepo,
+				group:   groupRepo,
+				subject: subjectRepo,
+			}
+			if err := webhook.ProcessTarball(syncCtx, tarStream, reposImpl); err != nil {
 				log.Printf("[app] Ошибка обработки данных из Git: %v", err)
 			} else {
 				log.Println("[app] initial data sync completed successfully")

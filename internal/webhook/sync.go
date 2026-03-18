@@ -7,12 +7,17 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path/filepath"
 	"strings"
+
+	"github.com/Map130/universities/internal/models"
+	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
+	"gopkg.in/yaml.v3"
 )
 
 // ProcessTarball extracts and processes data files from a GitHub tarball stream.
 // It reads the compressed stream on the fly to minimize memory usage and
-// routes JSON files to their respective processors based on directory structure.
+// routes YAML files to their respective processors based on directory structure.
 func ProcessTarball(ctx context.Context, stream io.Reader, repos WebhookRepos) error {
 	gzr, err := gzip.NewReader(stream)
 	if err != nil {
@@ -42,9 +47,9 @@ func ProcessTarball(ctx context.Context, stream io.Reader, repos WebhookRepos) e
 			continue
 		}
 
-		// For now, we only process JSON files automatically.
+		// For now, we only process YAML files automatically.
 		// MD files (descriptions) can be linked or parsed separately if needed.
-		if !strings.HasSuffix(header.Name, ".json") {
+		if !strings.HasSuffix(header.Name, ".yml") && !strings.HasSuffix(header.Name, ".yaml") {
 			continue
 		}
 
@@ -57,13 +62,13 @@ func ProcessTarball(ctx context.Context, stream io.Reader, repos WebhookRepos) e
 		// Route the file content based on its path
 		switch {
 		case strings.Contains(header.Name, "/data/universities/"):
-			err = processUniversity(ctx, content, repos)
+			err = processUniversity(ctx, header.Name, content, repos)
 		case strings.Contains(header.Name, "/data/specialties/"):
-			err = processSpecialty(ctx, content, repos)
+			err = processSpecialty(ctx, header.Name, content, repos)
 		case strings.Contains(header.Name, "/data/groups/"):
-			err = processGroup(ctx, content, repos)
+			err = processGroup(ctx, header.Name, content, repos)
 		case strings.Contains(header.Name, "/data/subjects/"):
-			err = processSubject(ctx, content, repos)
+			err = processSubject(ctx, header.Name, content, repos)
 		}
 
 		if err != nil {
@@ -74,28 +79,62 @@ func ProcessTarball(ctx context.Context, stream io.Reader, repos WebhookRepos) e
 	return nil
 }
 
-// processUniversity unmarshals the JSON and updates the database.
-func processUniversity(ctx context.Context, data []byte, repos WebhookRepos) error {
-	// TODO: Unmarshal data into models.University and save using repos
-	// Example:
-	// var uni models.University
-	// if err := json.Unmarshal(data, &uni); err != nil { return err }
-	// _, err := repos.Universities().Create(ctx, uni)
-	// return err
+func extractID(filename string) string {
+	base := filepath.Base(filename)
+	return strings.TrimSuffix(base, filepath.Ext(base))
+}
+
+// processUniversity unmarshals the YAML and updates the database.
+func processUniversity(ctx context.Context, filename string, data []byte, repos WebhookRepos) error {
+	if repos == nil {
+		return nil
+	}
+
+	type UniversityFile struct {
+		models.University `yaml:",inline"`
+		Offers            map[string]models.CreateOfferInput `yaml:"offers"`
+	}
+
+	var fileData UniversityFile
+	if err := yaml.Unmarshal(data, &fileData); err != nil {
+		return fmt.Errorf("failed to unmarshal university %s: %w", filename, err)
+	}
+
+	idStr := extractID(filename)
+	recordID := surrealmodels.NewRecordID("university", idStr)
+
+	// Upsert university
+	_, err := repos.Universities().Update(ctx, *recordID, fileData.University)
+	if err != nil {
+		return fmt.Errorf("failed to update university %s: %w", idStr, err)
+	}
+
+	// Recreate offers
+	if err := repos.Universities().DeleteAllOffers(ctx, *recordID); err != nil {
+		return fmt.Errorf("failed to clear offers for university %s: %w", idStr, err)
+	}
+
+	for specIDStr, offerInput := range fileData.Offers {
+		specID := surrealmodels.NewRecordID("specialty", specIDStr)
+		if _, err := repos.Universities().CreateOffer(ctx, *recordID, *specID, offerInput); err != nil {
+			return fmt.Errorf("failed to create offer for university %s, specialty %s: %w", idStr, specIDStr, err)
+		}
+	}
+
 	return nil
 }
 
-func processSpecialty(ctx context.Context, data []byte, repos WebhookRepos) error {
+func processSpecialty(ctx context.Context, filename string, data []byte, repos WebhookRepos) error {
 	// TODO: Unmarshal data into models.Specialty and save
 	return nil
 }
 
-func processGroup(ctx context.Context, data []byte, repos WebhookRepos) error {
+func processGroup(ctx context.Context, filename string, data []byte, repos WebhookRepos) error {
 	// TODO: Unmarshal data into models.SpecialtyGroup and save
 	return nil
 }
 
-func processSubject(ctx context.Context, data []byte, repos WebhookRepos) error {
+func processSubject(ctx context.Context, filename string, data []byte, repos WebhookRepos) error {
 	// TODO: Unmarshal data into models.Subject and save
 	return nil
 }

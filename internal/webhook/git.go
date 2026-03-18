@@ -79,7 +79,7 @@ func (c *GitClient) FetchFileContent(ctx context.Context, path string) ([]byte, 
 	return io.ReadAll(resp.Body)
 }
 
-// ListAllDataFiles lists all relevant JSON and MD files in the data directory
+// ListAllDataFiles lists all relevant YAML and MD files in the data directory
 func (c *GitClient) ListAllDataFiles(ctx context.Context) ([]string, error) {
 	// A naive implementation using GitHub Tree API
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/git/trees/%s?recursive=1", c.Owner, c.Repository, c.Branch)
@@ -118,7 +118,7 @@ func (c *GitClient) ListAllDataFiles(ctx context.Context) ([]string, error) {
 	var files []string
 	for _, item := range treeResp.Tree {
 		if item.Type == "blob" && strings.HasPrefix(item.Path, "data/") {
-			if strings.HasSuffix(item.Path, ".json") || strings.HasSuffix(item.Path, ".md") {
+			if strings.HasSuffix(item.Path, ".yml") || strings.HasSuffix(item.Path, ".yaml") || strings.HasSuffix(item.Path, ".md") {
 				files = append(files, item.Path)
 			}
 		}

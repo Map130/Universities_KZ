@@ -4,12 +4,16 @@ import (
 	"context"
 	"os"
 
+	"github.com/Map130/universities/internal/repository"
 	"github.com/gofiber/fiber/v2"
 )
 
 // WebhookRepos defines the interface for repositories needed during sync
 type WebhookRepos interface {
-	// Add required repository methods for upsert/delete here
+	Universities() repository.UniversityRepository
+	Specialties() repository.SpecialtyRepository
+	Groups() repository.SpecialtyGroupRepository
+	Subjects() repository.SubjectRepository
 }
 
 // SyncResults holds the result of a sync operation
