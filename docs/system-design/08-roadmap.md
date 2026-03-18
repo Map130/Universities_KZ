@@ -61,9 +61,9 @@ gantt
 | ---- | --------------------------------------- | ----------------------------------------------------------- | ------- | --------- | ------ |
 | 0.1  | **Webhook handler (POST /webhook/git)** | Новый файл `internal/webhook/handler.go`, `cmd/api/main.go` | 2–3 дня | 🔴 P0     | ✅     |
 | 0.2  | **HMAC-SHA256 верификация подписи**     | `internal/webhook/verify.go`                                | 2 часа  | 🔴 P0     | ✅     |
-| 0.3  | **JSON Schema для university.json**     | `schemas/university.schema.json`                            | 3 часа  | 🔴 P0     | 🔲     |
-| 0.4  | **JSON Schema для specialty.json**      | `schemas/specialty.schema.json`                             | 2 часа  | 🔴 P0     | 🔲     |
-| 0.5  | **JSON Schema для group.json**          | `schemas/specialty_group.schema.json`                       | 2 часа  | 🔴 P0     | 🔲     |
+| 0.3  | **JSON Schema для university.yml**      | `schemas/university.schema.json`                            | 3 часа  | 🔴 P0     | 🔲     |
+| 0.4  | **JSON Schema для specialty.yml**       | `schemas/specialty.schema.json`                             | 2 часа  | 🔴 P0     | 🔲     |
+| 0.5  | **JSON Schema для group.yml**           | `schemas/specialty_group.schema.json`                       | 2 часа  | 🔴 P0     | 🔲     |
 | 0.6  | **CI: JSON Schema validation**          | `.github/workflows/data-validate.yml` (в data-репозитории)  | 2 часа  | 🔴 P0     | 🔲     |
 | 0.7  | **Full sync endpoint**                  | `internal/webhook/sync.go`                                  | 1 день  | 🟡 P0     | ✅     |
 | 0.8  | **SurrealDB: memory → file:**           | `docker-compose.yml`                                        | 15 мин  | 🔴 P0     | ✅     |
@@ -165,20 +165,20 @@ universities-data/                  # Отдельный Git-репозитор�
 │   └── specialty_group.schema.json
 ├── data/
 │   ├── universities/
-│   │   ├── kaznu.json
+│   │   ├── kaznu.yml
 │   │   ├── kaznu.md               # Markdown-описание вуза
-│   │   ├── sdu.json
+│   │   ├── sdu.yml
 │   │   ├── sdu.md
 │   │   └── ...
 │   ├── specialties/
-│   │   ├── 6B06101.json
+│   │   ├── 6B06101.yml
 │   │   └── ...
 │   ├── groups/
-│   │   ├── B057.json
+│   │   ├── B057.yml
 │   │   └── ...
 │   └── subjects/
-│       ├── math.json
-│       ├── physics.json
+│       ├── math.yml
+│       ├── physics.yml
 │       └── ...
 └── README.md
 ```
