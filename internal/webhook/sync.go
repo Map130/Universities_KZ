@@ -104,19 +104,19 @@ func processUniversity(ctx context.Context, filename string, data []byte, repos 
 	recordID := surrealmodels.NewRecordID("university", idStr)
 
 	// Upsert university
-	_, err := repos.Universities().Update(ctx, *recordID, fileData.University)
+	_, err := repos.Universities().Update(ctx, recordID, fileData.University)
 	if err != nil {
 		return fmt.Errorf("failed to update university %s: %w", idStr, err)
 	}
 
 	// Recreate offers
-	if err := repos.Universities().DeleteAllOffers(ctx, *recordID); err != nil {
+	if err := repos.Universities().DeleteAllOffers(ctx, recordID); err != nil {
 		return fmt.Errorf("failed to clear offers for university %s: %w", idStr, err)
 	}
 
 	for specIDStr, offerInput := range fileData.Offers {
 		specID := surrealmodels.NewRecordID("specialty", specIDStr)
-		if _, err := repos.Universities().CreateOffer(ctx, *recordID, *specID, offerInput); err != nil {
+		if _, err := repos.Universities().CreateOffer(ctx, recordID, specID, offerInput); err != nil {
 			return fmt.Errorf("failed to create offer for university %s, specialty %s: %w", idStr, specIDStr, err)
 		}
 	}
