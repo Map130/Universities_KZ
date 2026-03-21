@@ -2,7 +2,9 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Map130/universities/internal/repository"
 	"github.com/gofiber/fiber/v2"
@@ -24,7 +26,7 @@ type SyncResults struct {
 }
 
 // WebhookHandler returns a fiber.Handler for GitHub push webhook events
-func WebhookHandler(repos WebhookRepos, secret string) fiber.Handler {
+func WebhookHandler(repos WebhookRepos, secret string, gitClient *GitClient) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// 1. Verify HMAC-SHA256 signature
 		signature := c.Get("X-Hub-Signature-256")
@@ -39,7 +41,7 @@ func WebhookHandler(repos WebhookRepos, secret string) fiber.Handler {
 		}
 
 		// 3. For each file: fetch content -> validate -> upsert/delete
-		results := syncChangedFiles(c.Context(), event, repos)
+		results := syncChangedFiles(c.Context(), event, repos, gitClient)
 
 		return c.JSON(fiber.Map{
 			"processed": results.Total,
@@ -64,38 +66,72 @@ func FullSyncHandler(repos WebhookRepos, gitClient *GitClient) fiber.Handler {
 		}
 
 		// 3. Sync each file
-		results := syncAllFiles(c.Context(), files, repos)
+		results := syncAllFiles(c.Context(), files, repos, gitClient)
 		return c.JSON(results)
 	}
 }
 
-// syncChangedFiles processes a push event and syncs changed files
-func syncChangedFiles(ctx context.Context, event *PushEvent, repos WebhookRepos) SyncResults {
-	// TODO: Implement file sync logic
-	// 1. Extract added/modified/removed files from event.Commits
-	// 2. Deduplicate files
-	// 3. Fetch content using GitClient for added/modified files
-	// 4. Validate against JSON schemas
-	// 5. Update or Delete in database using WebhookRepos
-
-	return SyncResults{
-		Total:   0,
-		Success: 0,
-		Errors:  []string{},
+// processFile routes the file content based on its path and processes it
+func processFile(ctx context.Context, filename string, content []byte, repos WebhookRepos) error {
+	switch {
+	case strings.Contains(filename, "/data/universities/"):
+		return processUniversity(ctx, filename, content, repos)
+	case strings.Contains(filename, "/data/specialties/"):
+		return processSpecialty(ctx, filename, content, repos)
+	case strings.Contains(filename, "/data/groups/"):
+		return processGroup(ctx, filename, content, repos)
+	case strings.Contains(filename, "/data/subjects/"):
+		return processSubject(ctx, filename, content, repos)
 	}
+	return nil
+}
+
+// syncChangedFiles processes a push event and syncs changed files
+func syncChangedFiles(ctx context.Context, event *PushEvent, repos WebhookRepos, gitClient *GitClient) SyncResults {
+	fileMap := make(map[string]bool)
+
+	for _, commit := range event.Commits {
+		for _, added := range commit.Added {
+			fileMap[added] = true
+		}
+		for _, modified := range commit.Modified {
+			fileMap[modified] = true
+		}
+		// TODO: handle removals gracefully
+	}
+
+	var filesToProcess []string
+	for f := range fileMap {
+		if strings.HasPrefix(f, "data/") && (strings.HasSuffix(f, ".yml") || strings.HasSuffix(f, ".yaml")) {
+			filesToProcess = append(filesToProcess, f)
+		}
+	}
+
+	return syncAllFiles(ctx, filesToProcess, repos, gitClient)
 }
 
 // syncAllFiles processes a full sync of all files
-func syncAllFiles(ctx context.Context, files []string, repos WebhookRepos) SyncResults {
-	// TODO: Implement full sync logic
-	// 1. Iterate over files
-	// 2. Fetch content using GitClient
-	// 3. Validate against JSON schemas
-	// 4. Upsert in database using WebhookRepos
-
-	return SyncResults{
-		Total:   0,
+func syncAllFiles(ctx context.Context, files []string, repos WebhookRepos, gitClient *GitClient) SyncResults {
+	results := SyncResults{
+		Total:   len(files),
 		Success: 0,
 		Errors:  []string{},
 	}
+
+	for _, file := range files {
+		content, err := gitClient.FetchFileContent(ctx, file)
+		if err != nil {
+			results.Errors = append(results.Errors, fmt.Sprintf("failed to fetch %s: %v", file, err))
+			continue
+		}
+
+		err = processFile(ctx, file, content, repos)
+		if err != nil {
+			results.Errors = append(results.Errors, fmt.Sprintf("failed to process %s: %v", file, err))
+		} else {
+			results.Success++
+		}
+	}
+
+	return results
 }

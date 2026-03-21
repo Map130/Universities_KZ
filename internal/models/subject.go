@@ -10,16 +10,16 @@ import (
 type Subject struct {
 	// ID — идентификатор записи в SurrealDB (например, subject:math).
 	// При создании может быть nil — SurrealDB сгенерирует автоматически.
-	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty"`
+	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty" yaml:"id,omitempty"`
 
 	// Уникальный код предмета ("math", "physics", "geography" и т. д.).
 	// Используется фронтом как value в <select> и в параметрах калькулятора.
-	Code string `json:"code" cbor:"code"`
+	Code string `json:"code" cbor:"code" yaml:"code"`
 
 	// Название предмета на трёх языках (kz / ru / en).
-	Name LocalizedName `json:"name" cbor:"name"`
+	Name LocalizedName `json:"name" cbor:"name" yaml:"name"`
 
 	// Временные метки (заполняются SurrealDB автоматически).
-	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty"`
-	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty"`
+	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty" yaml:"created_at,omitempty"`
+	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty" yaml:"updated_at,omitempty"`
 }

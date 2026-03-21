@@ -125,16 +125,101 @@ func processUniversity(ctx context.Context, filename string, data []byte, repos 
 }
 
 func processSpecialty(ctx context.Context, filename string, data []byte, repos WebhookRepos) error {
-	// TODO: Unmarshal data into models.Specialty and save
+	if repos == nil {
+		return nil
+	}
+
+	type SpecialtyFile struct {
+		models.Specialty `yaml:",inline"`
+		GroupCode        string `yaml:"group_code"`
+	}
+
+	var fileData SpecialtyFile
+	if err := yaml.Unmarshal(data, &fileData); err != nil {
+		return fmt.Errorf("failed to unmarshal specialty %s: %w", filename, err)
+	}
+
+	idStr := extractID(filename)
+	recordID := surrealmodels.NewRecordID("specialty", idStr)
+
+	if fileData.GroupCode != "" {
+		fileData.Specialty.Group = surrealmodels.NewRecordID("specialty_group", fileData.GroupCode)
+	}
+
+	_, err := repos.Specialties().Update(ctx, recordID, fileData.Specialty)
+	if err != nil {
+		return fmt.Errorf("failed to update specialty %s: %w", idStr, err)
+	}
+
 	return nil
 }
 
 func processGroup(ctx context.Context, filename string, data []byte, repos WebhookRepos) error {
-	// TODO: Unmarshal data into models.SpecialtyGroup and save
+	if repos == nil {
+		return nil
+	}
+
+	type SubjectRef struct {
+		Code  string `yaml:"code"`
+		Order int    `yaml:"order"`
+	}
+
+	type GroupFile struct {
+		models.SpecialtyGroup `yaml:",inline"`
+		Subjects              []SubjectRef `yaml:"subjects"`
+	}
+
+	var fileData GroupFile
+	if err := yaml.Unmarshal(data, &fileData); err != nil {
+		return fmt.Errorf("failed to unmarshal group %s: %w", filename, err)
+	}
+
+	idStr := extractID(filename)
+	recordID := surrealmodels.NewRecordID("specialty_group", idStr)
+
+	_, err := repos.Groups().Update(ctx, recordID, fileData.SpecialtyGroup)
+	if err != nil {
+		return fmt.Errorf("failed to update group %s: %w", idStr, err)
+	}
+
+	// Recreate requires edges if Subjects array contains valid codes
+	if err := repos.Groups().DeleteAllRequires(ctx, recordID); err != nil {
+		return fmt.Errorf("failed to clear requires for group %s: %w", idStr, err)
+	}
+
+	for _, subj := range fileData.Subjects {
+		if subj.Code == "" {
+			continue
+		}
+		subjID := surrealmodels.NewRecordID("subject", subj.Code)
+		input := models.CreateRequiresInput{
+			Priority: models.SubjectPriority(subj.Order),
+		}
+		if _, err := repos.Groups().CreateRequires(ctx, recordID, subjID, input); err != nil {
+			return fmt.Errorf("failed to create requires for group %s, subject %s: %w", idStr, subj.Code, err)
+		}
+	}
+
 	return nil
 }
 
 func processSubject(ctx context.Context, filename string, data []byte, repos WebhookRepos) error {
-	// TODO: Unmarshal data into models.Subject and save
+	if repos == nil {
+		return nil
+	}
+
+	var fileData models.Subject
+	if err := yaml.Unmarshal(data, &fileData); err != nil {
+		return fmt.Errorf("failed to unmarshal subject %s: %w", filename, err)
+	}
+
+	idStr := extractID(filename)
+	recordID := surrealmodels.NewRecordID("subject", idStr)
+
+	_, err := repos.Subjects().Update(ctx, recordID, fileData)
+	if err != nil {
+		return fmt.Errorf("failed to update subject %s: %w", idStr, err)
+	}
+
 	return nil
 }

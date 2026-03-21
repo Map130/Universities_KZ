@@ -11,17 +11,17 @@ import (
 // Пример: "B057" — Информационные технологии → Математика + Физика.
 type SpecialtyGroup struct {
 	// ID — идентификатор записи (например, specialty_group:abc123).
-	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty"`
+	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty" yaml:"id,omitempty"`
 
 	// Уникальный код группы ОП ("B057", "B058" и т. д.).
-	Code string `json:"code" cbor:"code"`
+	Code string `json:"code" cbor:"code" yaml:"code"`
 
 	// Название группы на трёх языках (kz / ru / en).
-	Name LocalizedName `json:"name" cbor:"name"`
+	Name LocalizedName `json:"name" cbor:"name" yaml:"name"`
 
 	// Временные метки (заполняются SurrealDB автоматически).
-	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty"`
-	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty"`
+	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty" yaml:"created_at,omitempty"`
+	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty" yaml:"updated_at,omitempty"`
 }
 
 // SpecialtyGroupFilters содержит параметры фильтрации для списка групп ОП.

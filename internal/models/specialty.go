@@ -8,33 +8,33 @@ import (
 // Соответствует таблице `specialty` в SurrealDB (SCHEMAFULL).
 type Specialty struct {
 	// ID — идентификатор записи в SurrealDB (например, specialty:xyz789).
-	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty"`
+	ID *surrealmodels.RecordID `json:"id,omitempty" cbor:"id,omitempty" yaml:"id,omitempty"`
 
 	// Уникальный код образовательной программы ("6B06101", "6B07201" и т. д.).
-	Code string `json:"code" cbor:"code"`
+	Code string `json:"code" cbor:"code" yaml:"code"`
 
 	// Название специальности на трёх языках (kz / ru / en).
-	Name LocalizedName `json:"name" cbor:"name"`
+	Name LocalizedName `json:"name" cbor:"name" yaml:"name"`
 
 	// Группа образовательных программ — record link на specialty_group.
 	// При обычном SELECT возвращается как RecordID.
 	// При SELECT ... FETCH `group` — развёрнутый объект (см. SpecialtyExpanded).
-	Group surrealmodels.RecordID `json:"group" cbor:"group"`
+	Group surrealmodels.RecordID `json:"group" cbor:"group" yaml:"group"`
 
 	// Временные метки (заполняются SurrealDB автоматически).
-	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty"`
-	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty"`
+	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty" yaml:"created_at,omitempty"`
+	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty" yaml:"updated_at,omitempty"`
 }
 
 // SpecialtyExpanded — специальность с развёрнутой группой ОП (FETCH `group`).
 // Используется для API-ответов, где нужно показать и группу, и её предметы.
 type SpecialtyExpanded struct {
-	ID        *surrealmodels.RecordID       `json:"id,omitempty" cbor:"id,omitempty"`
-	Code      string                        `json:"code" cbor:"code"`
-	Name      LocalizedName                 `json:"name" cbor:"name"`
-	Group     SpecialtyGroup                `json:"group" cbor:"group"`
-	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty"`
-	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty"`
+	ID        *surrealmodels.RecordID       `json:"id,omitempty" cbor:"id,omitempty" yaml:"id,omitempty"`
+	Code      string                        `json:"code" cbor:"code" yaml:"code"`
+	Name      LocalizedName                 `json:"name" cbor:"name" yaml:"name"`
+	Group     SpecialtyGroup                `json:"group" cbor:"group" yaml:"group"`
+	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty" yaml:"created_at,omitempty"`
+	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty" yaml:"updated_at,omitempty"`
 }
 
 // SpecialtyFilters содержит параметры фильтрации для списка специальностей.

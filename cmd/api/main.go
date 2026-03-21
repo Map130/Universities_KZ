@@ -141,13 +141,19 @@ func main() {
 	// Calculator
 	v1.Get("/calculator", h.GetCalculatorResults)
 
-	// ── Startup Sync (Data as Code) ─────────────────────────
+	// ── Webhooks & Data Sync ────────────────────────────────
+	reposImpl := &webhookReposImpl{
+		uni:     uniRepo,
+		spec:    specRepo,
+		group:   groupRepo,
+		subject: subjectRepo,
+	}
+
 	githubOwner := os.Getenv("GITHUB_OWNER")
 	githubRepo := os.Getenv("GITHUB_REPO")
 	githubBranch := os.Getenv("GITHUB_BRANCH")
 
 	if githubOwner != "" && githubRepo != "" && githubBranch != "" {
-		log.Println("[app] starting initial data sync from GitHub...")
 		gitClient := webhook.NewGitClient(
 			os.Getenv("GITHUB_TOKEN"),
 			githubOwner,
@@ -155,18 +161,18 @@ func main() {
 			githubBranch,
 		)
 
+		// Webhook Endpoints
+		app.Post("/webhook/git", webhook.WebhookHandler(reposImpl, os.Getenv("WEBHOOK_SECRET"), gitClient))
+		app.Post("/webhook/sync", webhook.FullSyncHandler(reposImpl, gitClient))
+
+		// Startup Sync
+		log.Println("[app] starting initial data sync from GitHub...")
 		syncCtx, syncCancel := context.WithTimeout(ctx, 5*time.Minute)
 
 		tarStream, err := gitClient.FetchTarball(syncCtx)
 		if err != nil {
 			log.Printf("[app] Ошибка загрузки данных из Git: %v", err)
 		} else {
-			reposImpl := &webhookReposImpl{
-				uni:     uniRepo,
-				spec:    specRepo,
-				group:   groupRepo,
-				subject: subjectRepo,
-			}
 			if err := webhook.ProcessTarball(syncCtx, tarStream, reposImpl); err != nil {
 				log.Printf("[app] Ошибка обработки данных из Git: %v", err)
 			} else {
@@ -176,7 +182,7 @@ func main() {
 		}
 		syncCancel()
 	} else {
-		log.Println("[app] skipping GitHub sync: missing GITHUB_OWNER, GITHUB_REPO, or GITHUB_BRANCH")
+		log.Println("[app] skipping GitHub sync and webhooks: missing GITHUB_OWNER, GITHUB_REPO, or GITHUB_BRANCH")
 	}
 
 	// ── Graceful Shutdown ───────────────────────────────────
