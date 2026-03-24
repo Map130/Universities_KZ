@@ -14,14 +14,14 @@
 
 Архитектура реализует паттерн **Data-as-Code** с двумя разделёнными контурами:
 
-- **Контур данных (Git)** — структурированные `.json` и `.md` файлы в Git-репозитории. Управление данными через PR → review → merge → webhook. Полная история изменений, аудит, откат — средствами VCS.
+- **Контур данных (Git)** — структурированные `.yml` и `.md` файлы в Git-репозитории. Управление данными через PR → review → merge → webhook. Полная история изменений, аудит, откат — средствами VCS.
 - **Контур потребления (API)** — тонкая Go-прослойка между клиентскими приложениями и графовой базой данных. Read-only JSON API с графовыми запросами, полнотекстовым поиском и фильтрацией.
 
 ## 1.3 Ключевые архитектурные решения
 
 | Решение                                | Обоснование                                                                                                                                                                                    |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Data-as-Code (Git + JSON/MD)**       | Данные версионируются наравне с кодом. PR-based workflow обеспечивает review, аудит и откат. Отсекает целый класс атак (CSRF, XSS, OAuth hijack), радикально упрощая поверхность безопасности. |
+| **Data-as-Code (Git + YAML/MD)**       | Данные версионируются наравне с кодом. PR-based workflow обеспечивает review, аудит и откат. Отсекает целый класс атак (CSRF, XSS, OAuth hijack), радикально упрощая поверхность безопасности. |
 | **GitOps (webhook → SurrealDB)**       | Изменения в Git-репозитории автоматически синхронизируются с базой данных через webhook-пайплайн. Единый источник истины — Git, БД — производный кэш для быстрых графовых запросов.            |
 | **Go + Fiber (тонкая API-прослойка)**  | Бэкенд отвечает только за роутинг и обход графов. Минимальный footprint, предсказуемая производительность. Один бинарник — деплой копированием файла.                                          |
 | **SurrealDB (graph + document + FTS)** | Графовая модель устраняет `JOIN`-цепочки при обходе связей «Вуз → Специальность → Группа ОП → Предметы ЕНТ». Встроенный полнотекстовый поиск (BM25) исключает зависимость от Elasticsearch.    |
@@ -32,7 +32,7 @@
 
 | Аспект                    | v1.0 (монолит + HTMX-админка)                   | v2.0 (тонкий API + Data-as-Code)                      |
 | ------------------------- | ----------------------------------------------- | ----------------------------------------------------- |
-| **Управление данными**    | Веб-админка (HTMX + SSR + Google OAuth)         | Git-репозиторий (JSON/MD + webhook)                   |
+| **Управление данными**    | Веб-админка (HTMX + SSR + Google OAuth)         | Git-репозиторий (YAML/MD + webhook)                   |
 | **Аутентификация**        | Google OAuth 2.0 + cookie session               | Не требуется (Git auth на уровне VCS)                 |
 | **Роль бэкенда**          | API + SSR-рендеринг + CRUD + auth               | Тонкая API-прослойка + графовые запросы               |
 | **Поверхность атаки**     | CSRF, XSS, OAuth, session, CSS injection        | Только SurrealQL injection (защищено параметризацией) |
@@ -51,13 +51,13 @@
 - REST API (`/api/v1`) — 8 read-only эндпоинтов с фильтрацией и пагинацией.
 - Загрузка и валидация медиафайлов через MinIO.
 - CI pipeline (GitHub Actions): build, test, lint, docker validate.
-- JSON-шаблоны для Data-as-Code (`university.json`, `specialty.json`, `specialty_group.json`).
+- YAML-шаблоны для Data-as-Code (`university.yml`, `specialty.yml`, `specialty_group.yml`).
 
 **Удалено в рамках рефакторинга v2.0:**
 
 - Веб-админка (HTMX + SSR, ~30 admin handlers, renderer, views, partials).
 - Аутентификация (Google OAuth 2.0, session store, auth middleware, build tags `noauth`).
-- Фронтенд-пайплайн (Tailwind CSS, Node.js, `package.json`, `tailwind.config.js`).
+- Фронтенд-пайплайн (Tailwind CSS, Node.js, `package.yml`, `tailwind.config.js`).
 
 **Ближайшие приоритеты:**
 
@@ -77,7 +77,7 @@ C4Context
 
     System(unikz, "Universities KZ API", "Go — тонкая API-прослойка, графовые запросы")
 
-    System_Ext(git, "Git Repository", "Data-as-Code: .json + .md файлы с данными вузов")
+    System_Ext(git, "Git Repository", "Data-as-Code: .yml + .md файлы с данными вузов")
     System_Ext(mon, "МОН РК / egov.kz", "Источник данных о грантах и баллах")
 
     Rel(abiturient, unikz, "HTTP/JSON", "/api/v1/*")
@@ -98,7 +98,7 @@ sequenceDiagram
     participant API as Go API
     participant C as Клиент (SPA / Bot)
 
-    E->>G: git push (JSON/MD файлы)
+    E->>G: git push (YAML/MD файлы)
     G->>CI: Trigger CI
     CI->>CI: JSON Schema validation
     CI->>CI: Lint + format check

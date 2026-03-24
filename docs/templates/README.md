@@ -16,14 +16,14 @@
 
 ## Файлы в директории
 
-- `university.template.json` — шаблон университета
-- `specialty.template.json` — шаблон специальности
-- `specialty_group.template.json` — шаблон группы ОП
+- `university.template.yml` — шаблон университета
+- `specialty.template.yml` — шаблон специальности
+- `specialty_group.template.yml` — шаблон группы ОП
 - `university.description.template.md` — шаблон описания университета в Markdown
 
 ---
 
-## JSON Схемы и Валидация
+## JSON Схемы (для YAML) и Валидация
 
 Для автоматической проверки (валидации) структуры данных созданы JSON Schema в папке `schema/`:
 
@@ -38,10 +38,10 @@
 npm install -g ajv-cli
 
 # Валидация файла университета
-ajv validate -s schema/university.schema.json -d university.template.json
+ajv validate -s schema/university.schema.json -d university.template.yml
 
 # Валидация группы специальностей
-ajv validate -s schema/specialty_group.schema.json -d specialty_group.template.json
+ajv validate -s schema/specialty_group.schema.json -d specialty_group.template.yml
 ```
 
 ---
@@ -79,7 +79,7 @@ ajv validate -s schema/specialty_group.schema.json -d specialty_group.template.j
 
 ## Формат сущностей
 
-### 1) `specialty_group.template.json`
+### 1) `specialty_group.template.yml`
 
 Описывает группу ОП и профильные предметы ЕНТ.
 
@@ -92,7 +92,7 @@ ajv validate -s schema/specialty_group.schema.json -d specialty_group.template.j
 
 ---
 
-### 2) `specialty.template.json`
+### 2) `specialty.template.yml`
 
 Описывает образовательную программу.
 
@@ -105,7 +105,7 @@ ajv validate -s schema/specialty_group.schema.json -d specialty_group.template.j
 
 ---
 
-### 3) `university.template.json`
+### 3) `university.template.yml`
 
 Описывает вуз и список связей со специальностями (`offers`).
 
@@ -148,7 +148,7 @@ ajv validate -s schema/specialty_group.schema.json -d specialty_group.template.j
 
 Перед отправкой данных в БД проверьте:
 
-1. JSON валиден синтаксически.
+1. YAML валиден синтаксически.
 2. Все обязательные поля присутствуют.
 3. Все ссылки (`group_code`, `specialty_code`) резолвятся.
 4. Числовые поля не отрицательные.

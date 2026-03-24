@@ -19,7 +19,7 @@ graph LR
 
     subgraph "v2.0 — Поверхность атаки"
         B1["SurrealQL injection<br/>✅ Защищено"]
-        B2["Webhook spoofing<br/>🔲 Планируется защита"]
+        B2["Webhook spoofing<br/>✅ Защищено"]
         B3["Logo upload<br/>🟡 Нет auth"]
         B4["Error message leakage<br/>🟢 LOW"]
     end
@@ -309,11 +309,11 @@ log.Printf("[api] GET /universities error: %v", err)
       - surreal_data:/data
 ```
 
-### 5.2.7 🔲 PLANNED: Webhook spoofing
+### 5.2.7 ✅ FIXED: Webhook spoofing
 
 **Новый вектор в v2.0.**
 
-Webhook endpoint (`POST /webhook/git`) — единственная точка входа для записи данных (кроме logo upload). Без защиты злоумышленник может отправить поддельный webhook и перезаписать данные в БД.
+Webhook endpoint (`POST /webhook/git`) — единственная точка входа для записи данных (кроме logo upload). Защищено с помощью проверки HMAC-SHA256 подписи. Без защиты злоумышленник мог бы отправить поддельный webhook и перезаписать данные в БД.
 
 **План устранения:**
 
@@ -356,7 +356,7 @@ func verifyWebhookSignature(body []byte, signatureHeader, secret string) bool {
 | 4   | Отсутствие Security Headers  | 🟡 MED       | Осталась из v1.0 | Phase 1         |
 | 5   | Error messages leak          | 🟢 LOW       | Осталась из v1.0 | Phase 1         |
 | 6   | SurrealDB in-memory          | 🟢 LOW (ops) | Осталась из v1.0 | Phase 0         |
-| 7   | Webhook spoofing             | 🟡 MED       | Новая в v2.0     | Phase 0         |
+| 7   | Webhook spoofing             | 🟢 LOW       | Новая в v2.0     | Phase 0         |
 
 **Сравнение с v1.0:**
 
@@ -440,7 +440,7 @@ graph TD
     end
 
     subgraph "v2.0 — 2 вектора атаки"
-        V2_WEBHOOK["Webhook spoofing 🔲"]
+        V2_WEBHOOK["Webhook spoofing ✅"]
         V2_LOGO["Logo upload 🟡"]
     end
 

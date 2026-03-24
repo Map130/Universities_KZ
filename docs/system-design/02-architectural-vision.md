@@ -181,7 +181,7 @@ JOIN requires r2 ON r2.group_id = sg.id AND r2.subject_id = (SELECT id FROM subj
 | Функция              | Альтернатива    | SurrealDB                                                                                                                  |
 | -------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | **Graph traversal**  | Neo4j, ArangoDB | Нативные edge-таблицы с `TYPE RELATION FROM...TO...`. `FETCH out` автоматически разворачивает RecordID в полный объект.    |
-| **Document storage** | MongoDB         | Каждая запись — JSON/CBOR-документ. Вложенные объекты (`name.kz`, `name.ru`, `name.en`) хранятся нативно.                  |
+| **Document storage** | MongoDB         | Каждая запись — YAML/CBOR-документ. Вложенные объекты (`name.kz`, `name.ru`, `name.en`) хранятся нативно.                  |
 | **Full-text search** | Elasticsearch   | Встроенный FTS с кастомным анализатором (`name_analyzer`), BM25-ранжирование, поддержка кириллицы через `edgengram(2,15)`. |
 
 **SCHEMAFULL-режим:**
@@ -263,7 +263,7 @@ Universities KZ v2.0 спроектирован как **Data-as-Code Wiki** —
 ```mermaid
 graph TB
     subgraph "Data Management (Git)"
-        GIT["Git Repository<br/>.json + .md файлы"]
+        GIT["Git Repository<br/>.yml + .md файлы"]
         CI["CI Pipeline<br/>JSON Schema validation"]
         WEBHOOK["Webhook Handler"]
     end
@@ -300,13 +300,13 @@ graph TB
 
 4. **Минимальная поверхность атаки.** Нет веб-интерфейса управления → нет OAuth, сессий, CSRF, XSS. Аутентификация редакторов — средствами Git-хостинга (GitHub/GitLab SSO, SSH-ключи, PAT).
 
-5. **Декларативное описание данных.** JSON-файлы описывают _что_ должно быть в базе, а не _как_ это туда загрузить. Webhook-handler реализует синхронизацию (upsert / delete).
+5. **Декларативное описание данных.** YAML-файлы описывают _что_ должно быть в базе, а не _как_ это туда загрузить. Webhook-handler реализует синхронизацию (upsert / delete).
 
 **Сравнение с предыдущей моделью «Headless Wiki» (v1.0):**
 
 | Аспект                     | v1.0 Headless Wiki                       | v2.0 Data-as-Code Wiki       |
 | -------------------------- | ---------------------------------------- | ---------------------------- |
-| Создание данных            | Веб-формы (HTMX + SSR)                   | Git commit (JSON/MD файлы)   |
+| Создание данных            | Веб-формы (HTMX + SSR)                   | Git commit (YAML/MD файлы)   |
 | Аутентификация             | Google OAuth 2.0 + cookie session        | Git auth (SSH / PAT / SSO)   |
 | Аудит изменений            | Логи приложения                          | `git log --oneline`          |
 | Откат ошибочных данных     | Ручная правка через админку              | `git revert <sha>` → webhook |
@@ -402,7 +402,7 @@ graph LR
     end
 
     subgraph "v2.0 — Тонкий API + Data-as-Code"
-        B_GIT["Git Repository<br/>JSON + MD"]
+        B_GIT["Git Repository<br/>YAML + MD"]
         B_WEBHOOK["Webhook<br/>Handler"]
         B_API["JSON API<br/>/api/v1/*"]
         B_DB["SurrealDB"]

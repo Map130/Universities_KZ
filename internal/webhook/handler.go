@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Map130/universities/internal/repository"
 	"github.com/gofiber/fiber/v2"
@@ -71,43 +70,20 @@ func FullSyncHandler(repos WebhookRepos, gitClient *GitClient) fiber.Handler {
 	}
 }
 
-// processFile routes the file content based on its path and processes it
-func processFile(ctx context.Context, filename string, content []byte, repos WebhookRepos) error {
-	switch {
-	case strings.Contains(filename, "/data/universities/"):
-		return processUniversity(ctx, filename, content, repos)
-	case strings.Contains(filename, "/data/specialties/"):
-		return processSpecialty(ctx, filename, content, repos)
-	case strings.Contains(filename, "/data/groups/"):
-		return processGroup(ctx, filename, content, repos)
-	case strings.Contains(filename, "/data/subjects/"):
-		return processSubject(ctx, filename, content, repos)
-	}
-	return nil
-}
-
 // syncChangedFiles processes a push event and syncs changed files
 func syncChangedFiles(ctx context.Context, event *PushEvent, repos WebhookRepos, gitClient *GitClient) SyncResults {
-	fileMap := make(map[string]bool)
+	// TODO: Implement file sync logic
+	// 1. Extract added/modified/removed files from event.Commits
+	// 2. Deduplicate files
+	// 3. Fetch content using GitClient for added/modified files
+	// 4. Validate against JSON schemas
+	// 5. Update or Delete in database using WebhookRepos
 
-	for _, commit := range event.Commits {
-		for _, added := range commit.Added {
-			fileMap[added] = true
-		}
-		for _, modified := range commit.Modified {
-			fileMap[modified] = true
-		}
-		// TODO: handle removals gracefully
+	return SyncResults{
+		Total:   0,
+		Success: 0,
+		Errors:  []string{},
 	}
-
-	var filesToProcess []string
-	for f := range fileMap {
-		if strings.HasPrefix(f, "data/") && (strings.HasSuffix(f, ".yml") || strings.HasSuffix(f, ".yaml")) {
-			filesToProcess = append(filesToProcess, f)
-		}
-	}
-
-	return syncAllFiles(ctx, filesToProcess, repos, gitClient)
 }
 
 // syncAllFiles processes a full sync of all files

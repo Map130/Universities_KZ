@@ -84,6 +84,22 @@ func extractID(filename string) string {
 	return strings.TrimSuffix(base, filepath.Ext(base))
 }
 
+// processFile routes the file content to the appropriate processor based on its path
+func processFile(ctx context.Context, filename string, content []byte, repos WebhookRepos) error {
+	switch {
+	case strings.Contains(filename, "/data/universities/"):
+		return processUniversity(ctx, filename, content, repos)
+	case strings.Contains(filename, "/data/specialties/"):
+		return processSpecialty(ctx, filename, content, repos)
+	case strings.Contains(filename, "/data/groups/"):
+		return processGroup(ctx, filename, content, repos)
+	case strings.Contains(filename, "/data/subjects/"):
+		return processSubject(ctx, filename, content, repos)
+	default:
+		return nil
+	}
+}
+
 // processUniversity unmarshals the YAML and updates the database.
 func processUniversity(ctx context.Context, filename string, data []byte, repos WebhookRepos) error {
 	if repos == nil {

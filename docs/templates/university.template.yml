@@ -1,0 +1,32 @@
+name:
+  ru: "Казахский национальный университет имени аль-Фараби"
+  kz: "әл-Фараби атындағы Қазақ ұлттық университеті"
+  en: "Al-Farabi Kazakh National University"
+abbr: "КазНУ"
+city: "Алматы"
+type: "public"
+website: "https://farabi.university"
+description: "Краткое описание университета: история, ключевые достижения, академические направления, инфраструктура, международное сотрудничество."
+logo_url: null
+offers:
+  - specialty_code: "6B06101"
+    grant_count: 120
+    quota_grant_count: 15
+    tuition_fee: 1350000
+    min_score: 75
+    last_year_threshold: 108
+  - specialty_code: "6B07103"
+    grant_count: 80
+    quota_grant_count: 10
+    tuition_fee: 1450000
+    min_score: 70
+    last_year_threshold: 101
+metadata:
+  schema_version: "1.0.0"
+  source_system: "external-import-service"
+  source_urls:
+    - "https://farabi.university"
+    - "https://example.kz/grants"
+    - "https://example.kz/ent-thresholds"
+  collected_at: "2026-03-14T00:00:00Z"
+  notes: "Если точные значения недоступны, используйте 0 для числовых полей по правилам импортера."

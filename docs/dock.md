@@ -70,17 +70,17 @@ university ──offers──▶ specialty ──group──▶ specialty_group 
 
 README описывает паттерн Data-as-Code с JSON-шаблонами. В `docs/` присутствуют:
 
-| Файл                        | Описание                              | Статус |
-| --------------------------- | ------------------------------------- | ------ |
-| `docs/university.json`      | Шаблон данных о вузе (с инструкциями) | ✅     |
-| `docs/specialty.json`       | Шаблон данных о специальности         | ✅     |
-| `docs/specialty_group.json` | Шаблон данных о группе ОП             | ✅     |
+| Файл                                 | Описание                              | Статус |
+| ------------------------------------ | ------------------------------------- | ------ |
+| `docs/templates/university.yml`      | Шаблон данных о вузе (с инструкциями) | ✅     |
+| `docs/templates/specialty.yml`       | Шаблон данных о специальности         | ✅     |
+| `docs/templates/specialty_group.yml` | Шаблон данных о группе ОП             | ✅     |
 
-### Webhook / GitOps — 🟡 описан, но не реализован
+### Webhook / GitOps — ✅ реализован
 
-README описывает webhook / GitOps pipeline для синхронизации данных из Git в SurrealDB. В коде (`main.go`) отсутствует `/webhook/*` эндпоинт.
+README описывает webhook / GitOps pipeline для синхронизации данных из Git в SurrealDB. В коде (`main.go`) реализованы `/webhook/git` и `/webhook/sync` эндпоинты, а также стартовая полная синхронизация.
 
-**Вердикт:** Не является ошибкой — README описывает целевую архитектуру, а Roadmap корректно помечает webhook как `[ ]` (не реализовано).
+**Вердикт:** Архитектура Data-as-Code внедрена, вебхуки принимают события push и выполняют потоковую обработку YAML файлов.
 
 ---
 
@@ -102,14 +102,14 @@ README описывает webhook / GitOps pipeline для синхрониза�
 
 | Артефакт                | Назначение (v1.0)     | В README? | В коде?                             | Проблема                   |
 | ----------------------- | --------------------- | --------- | ----------------------------------- | -------------------------- |
-| `package.json`          | npm (Tailwind CSS)    | ❌        | ✅ Есть                             | Мёртвый файл               |
-| `package-lock.json`     | npm lock              | ❌        | ✅ Есть                             | Мёртвый файл               |
+| `package.yml`          | npm (Tailwind CSS)    | ❌        | ✅ Есть                             | Мёртвый файл               |
+| `package-lock.yml`     | npm lock              | ❌        | ✅ Есть                             | Мёртвый файл               |
 | `tailwind.config.js`    | Tailwind конфигурация | ❌        | ✅ Есть                             | Мёртвый файл               |
 | `goth` в go.mod         | Google OAuth          | ❌        | ✅ В зависимостях                   | Неиспользуемая зависимость |
 | `.air.toml` pre_cmd     | Tailwind build        | ❌        | ✅ Ссылается на `npx tailwindcss`   | Сломанная конфигурация     |
 | `.air.toml` include_dir | `views`, `static`     | ❌        | ✅ Отслеживает несуществующие папки | Мёртвая конфигурация       |
 
-**Рекомендация:** Удалить `package.json`, `package-lock.json`, `tailwind.config.js`. Выполнить `go mod tidy` для удаления `goth`. Упростить `.air.toml` (убрать Tailwind pre_cmd, views, static из include_dir).
+**Рекомендация:** Удалить `package.yml`, `package-lock.yml`, `tailwind.config.js`. Выполнить `go mod tidy` для удаления `goth`. Упростить `.air.toml` (убрать Tailwind pre_cmd, views, static из include_dir).
 
 ---
 
@@ -222,7 +222,7 @@ README перечисляет 5 устранённых вектора атак (
 | REST API: 8 endpoints                | `[x]`  | ✅ 8 маршрутов в `main.go`               | ✅           |
 | Загрузка медиа через MinIO           | `[x]`  | ✅ `internal/storage/` + `POST .../logo` | ✅           |
 | CI pipeline                          | `[x]`  | ✅ `.github/workflows/ci.yml`            | ✅           |
-| Data-as-Code: JSON-шаблоны           | `[x]`  | ✅ `docs/*.json`                         | ✅           |
+| Data-as-Code: JSON-шаблоны           | `[x]`  | ✅ `docs/*.yml`                         | ✅           |
 | GitOps pipeline (webhook)            | `[ ]`  | ❌ Не реализован                         | ✅ Корректно |
 | JSON Schema валидация                | `[ ]`  | ❌ Не реализована                        | ✅ Корректно |
 | CORS middleware                      | `[ ]`  | ❌ Не реализован                         | ✅ Корректно |
@@ -250,7 +250,7 @@ README перечисляет 5 устранённых вектора атак (
 | CI (4 джоба)                                          | ✅              | ✅                         | ✅ Совпадает |
 | Безопасность (устранённые вектора)                    | ✅              | ✅                         | ✅ Совпадает |
 | Roadmap (статусы `[x]` / `[ ]`)                       | ✅              | ✅                         | ✅ Совпадает |
-| Артефакты v1.0 (package.json, tailwind, goth)         | ❌ Не упомянуты | ✅ Присутствуют            | 🔴 **Долг**  |
+| Артефакты v1.0 (package.yml, tailwind, goth)         | ❌ Не упомянуты | ✅ Присутствуют            | 🔴 **Долг**  |
 | `.air.toml` (ссылки на views, static, Tailwind)       | ❌ Не упомянут  | ✅ Устаревшая конфигурация | 🔴 **Долг**  |
 | `configs/` директория                                 | ❌ Не упомянута | ✅ Пустая                  | 🟡 Мелочь    |
 | `APP_ENV` переменная                                  | ❌ Не в README  | ✅ `os.Getenv`             | 🟡 Мелочь    |
@@ -261,11 +261,11 @@ README перечисляет 5 устранённых вектора атак (
 
 ### 🔴 1. Артефакты v1.0 не удалены
 
-Файлы `package.json`, `package-lock.json`, `tailwind.config.js` и зависимость `goth` в `go.mod` — остатки HTMX-админки. Они вводят в заблуждение (проект выглядит как Node.js + CSS-pipeline), хотя в v2.0 фронтенд-ассетов нет.
+Файлы `package.yml`, `package-lock.yml`, `tailwind.config.js` и зависимость `goth` в `go.mod` — остатки HTMX-админки. Они вводят в заблуждение (проект выглядит как Node.js + CSS-pipeline), хотя в v2.0 фронтенд-ассетов нет.
 
 **Действие:**
 
-1. Удалить `package.json`, `package-lock.json`, `tailwind.config.js`.
+1. Удалить `package.yml`, `package-lock.yml`, `tailwind.config.js`.
 2. Запустить `go mod tidy` для удаления `goth` и связанных зависимостей.
 3. Время: ~5 мин.
 
@@ -295,4 +295,4 @@ README перечисляет 5 устранённых вектора атак (
 
 **Документация v2.0 на ~95% совпадает с кодом.** Все ключевые архитектурные изменения (удаление админки, Data-as-Code, тонкий API) корректно отражены в README и System Design Document.
 
-Единственный реальный долг — **артефакты v1.0** (`package.json`, `tailwind.config.js`, `goth`, устаревший `.air.toml`), которые не удалены из репозитория. Исправляется за ~15 минут.
+Единственный реальный долг — **артефакты v1.0** (`package.yml`, `tailwind.config.js`, `goth`, устаревший `.air.toml`), которые не удалены из репозитория. Исправляется за ~15 минут.
