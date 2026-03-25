@@ -16,6 +16,8 @@ import (
 	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/handlers"
 	"github.com/Map130/universities/internal/repository"
+	"github.com/Map130/universities/internal/web"
+	"github.com/Map130/universities/internal/webhook"
 
 	_ "github.com/Map130/universities/docs/swagger"
 )
@@ -41,6 +43,18 @@ func requireEnv(key string) string {
 
 // @host      localhost:8080
 // @BasePath  /
+
+type webhookReposImpl struct {
+	uni     repository.UniversityRepository
+	spec    repository.SpecialtyRepository
+	group   repository.SpecialtyGroupRepository
+	subject repository.SubjectRepository
+}
+
+func (w *webhookReposImpl) Universities() repository.UniversityRepository { return w.uni }
+func (w *webhookReposImpl) Specialties() repository.SpecialtyRepository   { return w.spec }
+func (w *webhookReposImpl) Groups() repository.SpecialtyGroupRepository   { return w.group }
+func (w *webhookReposImpl) Subjects() repository.SubjectRepository        { return w.subject }
 
 // @schemes   http https
 func main() {
@@ -102,6 +116,12 @@ func main() {
 		Level: compress.LevelDefault,
 	}))
 
+	// ── Static Files ─────────────────────────────────────────
+	app.Static("/static", "./static")
+
+	// ── Web (SSR Frontend) ──────────────────────────────────
+	web.RegisterWebRoutes(app, uniRepo)
+
 	// ── Swagger UI ──────────────────────────────────────────
 	app.Get("/swagger/*", swagger.HandlerDefault)
 
@@ -127,6 +147,50 @@ func main() {
 
 	// Calculator
 	v1.Get("/calculator", h.GetCalculatorResults)
+
+	// ── Webhooks & Data Sync ────────────────────────────────
+	reposImpl := &webhookReposImpl{
+		uni:     uniRepo,
+		spec:    specRepo,
+		group:   groupRepo,
+		subject: subjectRepo,
+	}
+
+	githubOwner := os.Getenv("GITHUB_OWNER")
+	githubRepo := os.Getenv("GITHUB_REPO")
+	githubBranch := os.Getenv("GITHUB_BRANCH")
+
+	if githubOwner != "" && githubRepo != "" && githubBranch != "" {
+		gitClient := webhook.NewGitClient(
+			os.Getenv("GITHUB_TOKEN"),
+			githubOwner,
+			githubRepo,
+			githubBranch,
+		)
+
+		// Webhook Endpoints
+		app.Post("/webhook/git", webhook.WebhookHandler(reposImpl, os.Getenv("WEBHOOK_SECRET"), gitClient))
+		app.Post("/webhook/sync", webhook.FullSyncHandler(reposImpl, gitClient))
+
+		// Startup Sync
+		log.Println("[app] starting initial data sync from GitHub...")
+		syncCtx, syncCancel := context.WithTimeout(ctx, 5*time.Minute)
+
+		tarStream, err := gitClient.FetchTarball(syncCtx)
+		if err != nil {
+			log.Printf("[app] Ошибка загрузки данных из Git: %v", err)
+		} else {
+			if err := webhook.ProcessTarball(syncCtx, tarStream, reposImpl); err != nil {
+				log.Printf("[app] Ошибка обработки данных из Git: %v", err)
+			} else {
+				log.Println("[app] initial data sync completed successfully")
+			}
+			_ = tarStream.Close()
+		}
+		syncCancel()
+	} else {
+		log.Println("[app] skipping GitHub sync and webhooks: missing GITHUB_OWNER, GITHUB_REPO, or GITHUB_BRANCH")
+	}
 
 	// ── Graceful Shutdown ───────────────────────────────────
 	quit := make(chan os.Signal, 1)

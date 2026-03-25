@@ -1,0 +1,39 @@
+package views
+
+templ BaseLayout(title string) {
+	<!DOCTYPE html>
+	<html lang="ru">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title }</title>
+			<link rel="stylesheet" href="/static/css/main.css"/>
+			<script src="/static/js/htmx.min.js" defer></script>
+		</head>
+		<body>
+			@Navbar()
+			<main class="container">
+				{ children... }
+			</main>
+			@Footer()
+		</body>
+	</html>
+}
+
+templ Navbar() {
+	<header>
+		<div class="logo">
+			<a href="/" style="font-size: 1.25rem; font-weight: bold; color: var(--text-color);">Universities KZ</a>
+		</div>
+		<nav>
+			<a href="/universities" style="margin-left: 1rem;">Вузы</a>
+			<a href="/groups" style="margin-left: 1rem;">Группы ОП</a>
+		</nav>
+	</header>
+}
+
+templ Footer() {
+	<footer style="text-align: center; padding: 2rem; border-top: 1px solid #e2e8f0; margin-top: 2rem; color: #64748b; font-size: 0.875rem;">
+		&copy; 2026 Universities KZ. All rights reserved.
+	</footer>
+}

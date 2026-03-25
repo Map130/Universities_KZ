@@ -1,0 +1,18 @@
+{
+	# Email для уведомлений
+	email {$TLS_EMAIL}
+}
+
+# Если DOMAIN_NAME не задан или равен IP, Caddy будет работать по HTTP.
+# Если задан реальный домен, Caddy автоматом поднимет HTTPS.
+{$DOMAIN_NAME:http://} {
+	reverse_proxy api:8080
+
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}

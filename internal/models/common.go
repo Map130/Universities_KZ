@@ -5,9 +5,9 @@ package models
 // LocalizedName хранит строку на трёх языках (kz, ru, en).
 // Соответствует полю TYPE object в SurrealDB-схеме.
 type LocalizedName struct {
-	KZ string `json:"kz" cbor:"kz"`
-	RU string `json:"ru" cbor:"ru"`
-	EN string `json:"en" cbor:"en"`
+	KZ string `json:"kz" cbor:"kz" yaml:"kz"`
+	RU string `json:"ru" cbor:"ru" yaml:"ru"`
+	EN string `json:"en" cbor:"en" yaml:"en"`
 }
 
 // UniversityType — тип вуза (государственный / частный).

@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "University Schema",
+  "description": "JSON Schema for a university entity.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "object",
+      "description": "Localized name of the university",
+      "properties": {
+        "ru": { "type": "string" },
+        "kz": { "type": "string" },
+        "en": { "type": "string" }
+      },
+      "required": ["ru", "kz"]
+    },
+    "abbr": {
+      "type": "string",
+      "description": "University abbreviation"
+    },
+    "city": {
+      "type": "string",
+      "description": "City where the university is located"
+    },
+    "type": {
+      "type": "string",
+      "description": "Type of the university (e.g., public, private, national)"
+    },
+    "website": {
+      "type": "string",
+      "format": "uri",
+      "description": "Official website URL"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the university"
+    },
+    "logo_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "URL to the university's logo"
+    },
+    "offers": {
+      "type": "array",
+      "description": "List of specialties offered by the university",
+      "items": {
+        "type": "object",
+        "properties": {
+          "specialty_code": {
+            "type": "string",
+            "description": "Code of the offered specialty"
+          },
+          "grant_count": {
+            "type": "integer",
+            "description": "Number of regular grants available"
+          },
+          "quota_grant_count": {
+            "type": "integer",
+            "description": "Number of quota grants available"
+          },
+          "tuition_fee": {
+            "type": "number",
+            "description": "Annual tuition fee in local currency"
+          },
+          "min_score": {
+            "type": "integer",
+            "description": "Minimum ENT score required to apply"
+          },
+          "last_year_threshold": {
+            "type": "integer",
+            "description": "Passing ENT score from the previous year"
+          }
+        },
+        "required": [
+          "specialty_code",
+          "grant_count",
+          "quota_grant_count",
+          "tuition_fee",
+          "min_score",
+          "last_year_threshold"
+        ]
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Information about data collection and source",
+      "properties": {
+        "schema_version": { "type": "string" },
+        "source_system": { "type": "string" },
+        "source_urls": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" }
+        },
+        "collected_at": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "abbr",
+    "city",
+    "type",
+    "website",
+    "description",
+    "offers"
+  ]
+}

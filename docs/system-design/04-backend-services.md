@@ -7,7 +7,7 @@
 1. **Роутинг** — маршрутизация HTTP-запросов к нужному репозиторию.
 2. **Графовые запросы** — обход графа SurrealDB для сборки сложных ответов.
 3. **Медиа-загрузка** — проксирование файлов в MinIO с валидацией.
-4. **Webhook-приём** — синхронизация данных из Git-репозитория в SurrealDB (планируется).
+4. **Webhook-приём** — синхронизация данных из Git-репозитория в SurrealDB (реализовано).
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -204,7 +204,7 @@ func (r *surrealUniversityRepo) GetAll(ctx context.Context, f models.UniversityF
 
 Все пользовательские значения передаются через `$переменные` — конкатенация в строку запроса полностью исключена. Единственное исключение — имя поля `lang`, которое защищено whitelist (`kz`, `ru`, `en`).
 
-## 4.3 Webhook Handler (планируется)
+## 4.3 Webhook Handler (реализовано)
 
 ### 4.3.1 Назначение
 
@@ -641,17 +641,17 @@ func Connect(ctx context.Context, cfg Config) (*surrealdb.DB, error) {
 
 В v2.0 middleware-стек радикально упрощён:
 
-| Middleware                   | v1.0 | v2.0 | Описание                                |
-| ---------------------------- | ---- | ---- | --------------------------------------- |
-| `compress`                   | ✅   | ✅   | Gzip/Deflate сжатие ответов             |
-| `static` (CSS/JS/images)     | ✅   | ❌   | Удалён — нет фронтенд-ассетов           |
-| `session`                    | ✅   | ❌   | Удалён — нет cookie-auth                |
-| `auth.AuthRequired`          | ✅   | ❌   | Удалён — нет admin-маршрутов            |
-| `auth.NoAuthMiddleware`      | ✅   | ❌   | Удалён — нет build tag `noauth`         |
-| `cors` (планируется)         | ❌   | 🔲   | Для React SPA / внешних клиентов        |
-| `limiter` (планируется)      | ❌   | 🔲   | Rate limiting для публичного API        |
-| `helmet` (планируется)       | ❌   | 🔲   | Security headers (CSP, X-Frame-Options) |
-| `webhook HMAC` (планируется) | ❌   | 🔲   | Верификация подписи webhook-запросов    |
+| Middleware               | v1.0 | v2.0 | Описание                                |
+| ------------------------ | ---- | ---- | --------------------------------------- |
+| `compress`               | ✅   | ✅   | Gzip/Deflate сжатие ответов             |
+| `static` (CSS/JS/images) | ✅   | ❌   | Удалён — нет фронтенд-ассетов           |
+| `session`                | ✅   | ❌   | Удалён — нет cookie-auth                |
+| `auth.AuthRequired`      | ✅   | ❌   | Удалён — нет admin-маршрутов            |
+| `auth.NoAuthMiddleware`  | ✅   | ❌   | Удалён — нет build tag `noauth`         |
+| `cors` (планируется)     | ❌   | 🔲   | Для React SPA / внешних клиентов        |
+| `limiter` (планируется)  | ❌   | 🔲   | Rate limiting для публичного API        |
+| `helmet` (планируется)   | ❌   | 🔲   | Security headers (CSP, X-Frame-Options) |
+| `webhook HMAC`           | ❌   | ✅   | Верификация подписи webhook-запросов    |
 
 Текущая конфигурация:
 

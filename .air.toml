@@ -18,8 +18,8 @@ tmp_dir = "tmp"
 
 [build]
 
-  # ── 0. Swagger генерация перед сборкой ─────────────────────
-  pre_cmd = ["swag init --generalInfo cmd/api/main.go --parseDependency --parseInternal --output docs/swagger --quiet"]
+  # ── 0. Генерация перед сборкой (Swagger + Templ) ───────────
+  pre_cmd = ["swag init --generalInfo cmd/api/main.go --parseDependency --parseInternal --output docs/swagger --quiet", "go run github.com/a-h/templ/cmd/templ@latest generate"]
 
   # ── 1. Компиляция Go ---------------------------------------
   cmd = "go build -o ./tmp/main ./cmd/api"
@@ -33,17 +33,17 @@ tmp_dir = "tmp"
   # cmd     — main.go, точка входа
   # internal— handlers, models, repo, auth, storage
   # configs — конфиги (пока пусто, но пусть следит)
-  include_dir = ["cmd", "internal", "configs"]
+  include_dir = ["cmd", "internal", "configs", "static"]
 
   # ── Какие расширения триггерят rebuild ─────────────────────
-  include_ext = ["go", "html", "css", "js", "tmpl", "tpl", "surql"]
-  include_file = ["tailwind.config.js"]
+  include_ext = ["go", "html", "css", "js", "tmpl", "tpl", "surql", "templ"]
+  include_file = []
 
   # ── Что исключить ─────────────────────────────────────────
   # tmp — артефакты билда air
   # .git — понятно
   exclude_dir = ["tmp", "vendor", "testdata", ".git", "docs"]
-  exclude_regex = ["_test\\.go$"]
+  exclude_regex = ["_test\\.go$", "_templ\\.go$"]
   exclude_unchanged = false
 
   # ── Timing ─────────────────────────────────────────────────
