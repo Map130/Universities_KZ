@@ -106,9 +106,14 @@ func processUniversity(ctx context.Context, filename string, data []byte, repos 
 		return nil
 	}
 
+	type OfferInput struct {
+		SpecialtyCode string `yaml:"specialty_code"`
+		models.CreateOfferInput `yaml:",inline"`
+	}
+
 	type UniversityFile struct {
 		models.University `yaml:",inline"`
-		Offers            map[string]models.CreateOfferInput `yaml:"offers"`
+		Offers            []OfferInput `yaml:"offers"`
 	}
 
 	var fileData UniversityFile
@@ -130,10 +135,13 @@ func processUniversity(ctx context.Context, filename string, data []byte, repos 
 		return fmt.Errorf("failed to clear offers for university %s: %w", idStr, err)
 	}
 
-	for specIDStr, offerInput := range fileData.Offers {
-		specID := surrealmodels.NewRecordID("specialty", specIDStr)
-		if _, err := repos.Universities().CreateOffer(ctx, recordID, specID, offerInput); err != nil {
-			return fmt.Errorf("failed to create offer for university %s, specialty %s: %w", idStr, specIDStr, err)
+	for _, offerInput := range fileData.Offers {
+		if offerInput.SpecialtyCode == "" {
+			continue
+		}
+		specID := surrealmodels.NewRecordID("specialty", offerInput.SpecialtyCode)
+		if _, err := repos.Universities().CreateOffer(ctx, recordID, specID, offerInput.CreateOfferInput); err != nil {
+			return fmt.Errorf("failed to create offer for university %s, specialty %s: %w", idStr, offerInput.SpecialtyCode, err)
 		}
 	}
 
@@ -224,17 +232,28 @@ func processSubject(ctx context.Context, filename string, data []byte, repos Web
 		return nil
 	}
 
-	var fileData models.Subject
-	if err := yaml.Unmarshal(data, &fileData); err != nil {
-		return fmt.Errorf("failed to unmarshal subject %s: %w", filename, err)
+	var subjects []models.Subject
+	if err := yaml.Unmarshal(data, &subjects); err != nil {
+		// Fallback for single subject
+		var singleSubject models.Subject
+		if errSingle := yaml.Unmarshal(data, &singleSubject); errSingle == nil {
+			subjects = []models.Subject{singleSubject}
+		} else {
+			return fmt.Errorf("failed to unmarshal subject %s: %w", filename, err)
+		}
 	}
 
-	idStr := extractID(filename)
-	recordID := surrealmodels.NewRecordID("subject", idStr)
+	for _, subj := range subjects {
+		idStr := subj.Code
+		if idStr == "" {
+			idStr = extractID(filename)
+		}
+		recordID := surrealmodels.NewRecordID("subject", idStr)
 
-	_, err := repos.Subjects().Update(ctx, recordID, fileData)
-	if err != nil {
-		return fmt.Errorf("failed to update subject %s: %w", idStr, err)
+		_, err := repos.Subjects().Update(ctx, recordID, subj)
+		if err != nil {
+			return fmt.Errorf("failed to update subject %s: %w", idStr, err)
+		}
 	}
 
 	return nil
