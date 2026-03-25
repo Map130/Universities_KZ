@@ -73,13 +73,36 @@ func (r *surrealSubjectRepo) Create(ctx context.Context, s models.Subject) (*mod
 
 func (r *surrealSubjectRepo) Update(ctx context.Context, id surrealmodels.RecordID, s models.Subject) (*models.Subject, error) {
 	data := map[string]any{
+		"code": s.Code,
 		"name": map[string]any{"kz": s.Name.KZ, "ru": s.Name.RU, "en": s.Name.EN},
 	}
-	result, err := surrealdb.Merge[models.Subject](ctx, r.pool.Get(), id, data)
+
+	// Используем UPSERT для идемпотентного обновления/создания (SurrealDB 1.0+).
+	query := "UPSERT $id CONTENT $data"
+	vars := map[string]any{
+		"id":   id,
+		"data": data,
+	}
+
+	results, err := surrealdb.Query[[]models.Subject](ctx, r.pool.Get(), query, vars)
 	if err != nil {
 		return nil, fmt.Errorf("subject.Update: %w", err)
 	}
-	return result, nil
+
+	if results == nil || len(*results) == 0 {
+		return nil, fmt.Errorf("subject.Update: empty result from DB")
+	}
+
+	first := (*results)[0]
+	if first.Error != nil {
+		return nil, fmt.Errorf("subject.Update: %w", first.Error)
+	}
+
+	if len(first.Result) == 0 {
+		return nil, fmt.Errorf("subject.Update: failed to upsert record")
+	}
+
+	return &first.Result[0], nil
 }
 
 func (r *surrealSubjectRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error {
