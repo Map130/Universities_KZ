@@ -278,12 +278,32 @@ func (r *surrealUniversityRepo) Update(ctx context.Context, id surrealmodels.Rec
 	// Кастомный CSS для премиум-вузов.
 	data["custom_css"] = u.CustomCSS
 
-	result, err := surrealdb.Merge[models.University](ctx, r.pool.Get(), id, data)
+	// Используем UPSERT для идемпотентного обновления/создания (SurrealDB 1.0+).
+	query := "UPSERT $id CONTENT $data"
+	vars := map[string]any{
+		"id":   id,
+		"data": data,
+	}
+
+	results, err := surrealdb.Query[[]models.University](ctx, r.pool.Get(), query, vars)
 	if err != nil {
 		return nil, fmt.Errorf("university.Update: %w", err)
 	}
 
-	return result, nil
+	if results == nil || len(*results) == 0 {
+		return nil, fmt.Errorf("university.Update: empty result from DB")
+	}
+
+	first := (*results)[0]
+	if first.Error != nil {
+		return nil, fmt.Errorf("university.Update: %w", first.Error)
+	}
+
+	if len(first.Result) == 0 {
+		return nil, fmt.Errorf("university.Update: failed to upsert record")
+	}
+
+	return &first.Result[0], nil
 }
 
 // ---------------------------------------------------------------------------
