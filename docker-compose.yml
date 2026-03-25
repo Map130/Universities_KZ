@@ -44,7 +44,7 @@ services:
     user: root
     expose:
       - "8000"
-    command: start --log info --user ${SURREAL_USER} --pass ${SURREAL_PASS} surrealkv:///data/surreal.db
+    command: start --log info --user "${SURREAL_USER}" --pass "${SURREAL_PASS}" surrealkv:///data/surreal.db
     volumes:
       - surreal_data:/data
     restart: always
