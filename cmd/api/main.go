@@ -185,7 +185,7 @@ func main() {
 			} else {
 				log.Println("[app] initial data sync completed successfully")
 			}
-			tarStream.Close()
+			_ = tarStream.Close()
 		}
 		syncCancel()
 	} else {

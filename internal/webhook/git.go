@@ -70,7 +70,7 @@ func (c *GitClient) FetchFileContent(ctx context.Context, path string) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch file %s: status %d", path, resp.StatusCode)
@@ -98,7 +98,7 @@ func (c *GitClient) ListAllDataFiles(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch tree: status %d", resp.StatusCode)
@@ -148,7 +148,7 @@ func (c *GitClient) FetchTarball(ctx context.Context) (io.ReadCloser, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("failed to fetch tarball: status %d", resp.StatusCode)
 	}
 

@@ -23,7 +23,7 @@ func ProcessTarball(ctx context.Context, stream io.Reader, repos WebhookRepos) e
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer gzr.Close()
+	defer func() { _ = gzr.Close() }()
 
 	tr := tar.NewReader(gzr)
 
@@ -159,7 +159,7 @@ func processSpecialty(ctx context.Context, filename string, data []byte, repos W
 	recordID := surrealmodels.NewRecordID("specialty", idStr)
 
 	if fileData.GroupCode != "" {
-		fileData.Specialty.Group = surrealmodels.NewRecordID("specialty_group", fileData.GroupCode)
+		fileData.Group = surrealmodels.NewRecordID("specialty_group", fileData.GroupCode)
 	}
 
 	_, err := repos.Specialties().Update(ctx, recordID, fileData.Specialty)

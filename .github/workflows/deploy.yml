@@ -37,7 +37,7 @@ jobs:
             echo "DOMAIN_NAME=${{ secrets.DOMAIN_NAME }}" >> .env
             echo "TLS_EMAIL=${{ secrets.TLS_EMAIL }}" >> .env
             echo "WEBHOOK_SECRET=${{ secrets.WEBHOOK_SECRET }}" >> .env
-            echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> .env
+            echo "GITHUB_TOKEN=${{ secrets.GH_PAT }}" >> .env
             echo "GITHUB_OWNER=${{ github.repository_owner }}" >> .env
             echo "GITHUB_REPO=universities-data" >> .env
             echo "GITHUB_BRANCH=main" >> .env
