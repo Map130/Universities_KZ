@@ -1,17 +1,16 @@
 {
-	# Email for Let's Encrypt notifications
+	# Email для уведомлений
 	email {$TLS_EMAIL}
 }
 
-{$DOMAIN_NAME} {
+# Если DOMAIN_NAME не задан или равен IP, Caddy будет работать по HTTP.
+# Если задан реальный домен, Caddy автоматом поднимет HTTPS.
+{$DOMAIN_NAME:http://} {
 	reverse_proxy api:8080
 
-	# Compress responses
 	encode zstd gzip
 
-	# Basic security headers
 	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
