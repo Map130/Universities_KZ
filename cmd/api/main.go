@@ -16,6 +16,7 @@ import (
 	"github.com/Map130/universities/internal/db"
 	"github.com/Map130/universities/internal/handlers"
 	"github.com/Map130/universities/internal/repository"
+	"github.com/Map130/universities/internal/web"
 	"github.com/Map130/universities/internal/webhook"
 
 	_ "github.com/Map130/universities/docs/swagger"
@@ -114,6 +115,12 @@ func main() {
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelDefault,
 	}))
+
+	// ── Static Files ─────────────────────────────────────────
+	app.Static("/static", "./static")
+
+	// ── Web (SSR Frontend) ──────────────────────────────────
+	web.RegisterWebRoutes(app, uniRepo)
 
 	// ── Swagger UI ──────────────────────────────────────────
 	app.Get("/swagger/*", swagger.HandlerDefault)

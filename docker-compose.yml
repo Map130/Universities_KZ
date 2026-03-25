@@ -3,9 +3,10 @@ services:
   surrealdb:
     image: surrealdb/surrealdb:latest
     container_name: universities_db
+    user: root
     ports:
       - "8000:8000"
-    command: start --log info --user ${SURREAL_USER} --pass ${SURREAL_PASS} file:/data/surreal.db
+    command: start --log info --user ${SURREAL_USER} --pass ${SURREAL_PASS} surrealkv:///data/surreal.db
     volumes:
       - surreal_data:/data
     restart: always
