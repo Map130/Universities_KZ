@@ -1,0 +1,50 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "."
+          target: "~/app"
+          rm: true # Очищаем старую папку перед копированием
+
+      - name: Deploy with Docker Compose
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/app
+            # Генерируем .env файл из секретов GitHub на лету
+            echo "SURREAL_USER=${{ secrets.SURREAL_USER }}" > .env
+            echo "SURREAL_PASS=${{ secrets.SURREAL_PASS }}" >> .env
+            echo "SURREAL_NS=main" >> .env
+            echo "SURREAL_DB=main" >> .env
+            echo "DOMAIN_NAME=${{ secrets.DOMAIN_NAME }}" >> .env
+            echo "TLS_EMAIL=${{ secrets.TLS_EMAIL }}" >> .env
+            echo "WEBHOOK_SECRET=${{ secrets.WEBHOOK_SECRET }}" >> .env
+            echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> .env
+            echo "GITHUB_OWNER=${{ github.repository_owner }}" >> .env
+            echo "GITHUB_REPO=universities-data" >> .env
+            echo "GITHUB_BRANCH=main" >> .env
+            
+            # Перезапускаем сервисы
+            docker compose down
+            docker compose up -d --build
+            
+            # Чистим старые образы, чтобы не забивать диск дроплета
+            docker image prune -f

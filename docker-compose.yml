@@ -1,11 +1,49 @@
 services:
+  # Caddy Reverse Proxy
+  caddy:
+    image: caddy:2-alpine
+    container_name: universities_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
+      - TLS_EMAIL=${TLS_EMAIL:-admin@localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  # Наш Go API
+  api:
+    build: .
+    container_name: universities_api
+    restart: unless-stopped
+    environment:
+      - APP_PORT=8080
+      - SURREAL_URL=ws://surrealdb:8000/rpc
+      - SURREAL_USER=${SURREAL_USER}
+      - SURREAL_PASS=${SURREAL_PASS}
+      - SURREAL_NS=${SURREAL_NS:-main}
+      - SURREAL_DB=${SURREAL_DB:-main}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_OWNER=${GITHUB_OWNER}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - GITHUB_BRANCH=${GITHUB_BRANCH:-main}
+    depends_on:
+      - surrealdb
+
   # Наша база данных будущего
   surrealdb:
     image: surrealdb/surrealdb:latest
     container_name: universities_db
     user: root
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     command: start --log info --user ${SURREAL_USER} --pass ${SURREAL_PASS} surrealkv:///data/surreal.db
     volumes:
       - surreal_data:/data
