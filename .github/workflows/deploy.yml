@@ -8,27 +8,25 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Copy files to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "."
-          target: "~/app"
-          rm: true # Очищаем старую папку перед копированием
-
       - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          port: 2222
           script: |
+            mkdir -p ~/app
             cd ~/app
+            
+            # Клонируем или обновляем код
+            if [ ! -d ".git" ]; then
+              git clone https://oauth2:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git .
+            else
+              git reset --hard HEAD
+              git pull origin main
+            fi
+            
             # Генерируем .env файл из секретов GitHub на лету
             echo "SURREAL_USER=${{ secrets.SURREAL_USER }}" > .env
             echo "SURREAL_PASS=${{ secrets.SURREAL_PASS }}" >> .env
