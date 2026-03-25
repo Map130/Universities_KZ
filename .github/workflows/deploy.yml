@@ -37,7 +37,7 @@ jobs:
             echo "WEBHOOK_SECRET=${{ secrets.WEBHOOK_SECRET }}" >> .env
             echo "GITHUB_TOKEN=${{ secrets.GH_PAT }}" >> .env
             echo "GITHUB_OWNER=${{ github.repository_owner }}" >> .env
-            echo "GITHUB_REPO=${{ secrets.GITHUB_REPO }}" >> .env
+            echo "GITHUB_REPO=${{ secrets.DATA_REPO }}" >> .env
             echo "GITHUB_BRANCH=main" >> .env
             
             # Перезапускаем сервисы
