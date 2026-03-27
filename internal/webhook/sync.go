@@ -81,7 +81,7 @@ func ProcessTarball(ctx context.Context, stream io.Reader, repos WebhookRepos) e
 
 func extractID(filename string) string {
 	base := filepath.Base(filename)
-	return strings.TrimSuffix(base, filepath.Ext(base))
+	return strings.ToLower(strings.TrimSuffix(base, filepath.Ext(base)))
 }
 
 // processFile routes the file content to the appropriate processor based on its path
@@ -139,7 +139,7 @@ func processUniversity(ctx context.Context, filename string, data []byte, repos 
 		if offerInput.SpecialtyCode == "" {
 			continue
 		}
-		specID := surrealmodels.NewRecordID("specialty", offerInput.SpecialtyCode)
+		specID := surrealmodels.NewRecordID("specialty", strings.ToLower(offerInput.SpecialtyCode))
 		if _, err := repos.Universities().CreateOffer(ctx, recordID, specID, offerInput.CreateOfferInput); err != nil {
 			return fmt.Errorf("failed to create offer for university %s, specialty %s: %w", idStr, offerInput.SpecialtyCode, err)
 		}
@@ -167,7 +167,7 @@ func processSpecialty(ctx context.Context, filename string, data []byte, repos W
 	recordID := surrealmodels.NewRecordID("specialty", idStr)
 
 	if fileData.GroupCode != "" {
-		fileData.Group = surrealmodels.NewRecordID("specialty_group", fileData.GroupCode)
+		fileData.Group = surrealmodels.NewRecordID("specialty_group", strings.ToLower(fileData.GroupCode))
 	}
 
 	_, err := repos.Specialties().Update(ctx, recordID, fileData.Specialty)
@@ -215,7 +215,7 @@ func processGroup(ctx context.Context, filename string, data []byte, repos Webho
 		if subj.Code == "" {
 			continue
 		}
-		subjID := surrealmodels.NewRecordID("subject", subj.Code)
+		subjID := surrealmodels.NewRecordID("subject", strings.ToLower(subj.Code))
 		input := models.CreateRequiresInput{
 			Priority: models.SubjectPriority(subj.Order),
 		}
@@ -248,6 +248,7 @@ func processSubject(ctx context.Context, filename string, data []byte, repos Web
 		if idStr == "" {
 			idStr = extractID(filename)
 		}
+		idStr = strings.ToLower(idStr)
 		recordID := surrealmodels.NewRecordID("subject", idStr)
 
 		_, err := repos.Subjects().Update(ctx, recordID, subj)
