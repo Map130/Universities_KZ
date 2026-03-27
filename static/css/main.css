@@ -25,6 +25,8 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .container {
@@ -64,4 +66,78 @@ a:hover {
 
 .card:hover {
   transform: translateY(-2px);
+}
+
+/* Утилитные классы для сеток, чтобы убрать инлайн-стили из templ */
+.grid-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.grid-auto-fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.flex-col-mobile {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* Медиа-запросы для мобильных устройств */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    padding: 1rem;
+    text-align: center;
+  }
+  
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  nav a {
+    margin-left: 0 !important; /* переопределяем инлайн */
+    padding: 0.5rem;
+  }
+
+  .container {
+    padding: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.75rem !important;
+  }
+
+  .grid-2-col {
+    grid-template-columns: 1fr;
+  }
+  
+  .flex-col-mobile {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .button-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
