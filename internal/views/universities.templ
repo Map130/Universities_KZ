@@ -11,7 +11,7 @@ templ Universities(unis []models.University) {
 			<h1 style="font-size: 2rem; margin-bottom: 1.5rem;">Каталог университетов</h1>
 			
 			<div class="card" style="padding: 1.5rem; margin-bottom: 2rem; background: #f8fafc;">
-				<form hx-get="/universities" hx-target="#university-list" hx-push-url="true" hx-trigger="input changed delay:300ms, search, change" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+				<form hx-get="/universities" hx-target="#university-list" hx-push-url="true" hx-trigger="input changed delay:300ms, search, change" class="grid-auto-fit">
 					<div>
 						<label for="search" style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">Поиск по названию</label>
 						<input type="text" id="search" name="search" placeholder="Напр: МУИТ" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px;"/>

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/swagger"
 
 	"github.com/Map130/universities/internal/db"
@@ -106,6 +107,9 @@ func main() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	})
+
+	// ── Helmet Middleware (Security Headers) ─────────────────
+	app.Use(helmet.New())
 
 	// ── Gzip/Deflate сжатие (on-the-fly, без файлового кэша) ─
 	// Fiber middleware compress сжимает ответы на лету.

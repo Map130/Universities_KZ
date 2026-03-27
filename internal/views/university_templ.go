@@ -46,7 +46,7 @@ func UniversityDetail(detail models.UniversityDetail) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div style=\"max-width: 1000px; margin: 0 auto; padding: 2rem 0;\"><div class=\"card\" style=\"margin-bottom: 2rem; padding: 2rem;\"><div style=\"display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div style=\"max-width: 1000px; margin: 0 auto; padding: 2rem 0;\"><div class=\"card\" style=\"margin-bottom: 2rem; padding: 2rem;\"><div class=\"flex-col-mobile\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -110,7 +110,7 @@ func UniversityDetail(detail models.UniversityDetail) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><div style=\"color: #64748b; margin-bottom: 1.5rem; display: flex; gap: 1.5rem; font-size: 1rem;\"><span>📍 ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><div class=\"flex-col-mobile\" style=\"color: #64748b; margin-bottom: 1.5rem; gap: 1.5rem; font-size: 1rem;\"><span>📍 ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -223,7 +223,7 @@ func UniversityDetail(detail models.UniversityDetail) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</h3></div><div style=\"border-top: 1px solid #e2e8f0; padding-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.875rem;\"><div><div style=\"color: #64748b; margin-bottom: 0.25rem;\">Мин. балл ЕНТ</div><div style=\"font-weight: 600; color: #0f172a;\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</h3></div><div class=\"grid-2-col\" style=\"border-top: 1px solid #e2e8f0; padding-top: 1rem; font-size: 0.875rem;\"><div><div style=\"color: #64748b; margin-bottom: 0.25rem;\">Мин. балл ЕНТ</div><div style=\"font-weight: 600; color: #0f172a;\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
