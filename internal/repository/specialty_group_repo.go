@@ -231,7 +231,7 @@ func (r *surrealSpecialtyGroupRepo) Update(ctx context.Context, id surrealmodels
 	}
 
 	// Используем UPSERT для идемпотентного обновления/создания (SurrealDB 1.0+).
-	query := "UPSERT $id CONTENT $data"
+	query := "UPSERT $id MERGE $data"
 	vars := map[string]any{
 		"id":   id,
 		"data": data,

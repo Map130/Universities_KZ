@@ -81,19 +81,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.CalculatorResponse"
+                            "$ref": "#/definitions/models.CalculatorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -150,14 +150,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup"
+                                "$ref": "#/definitions/models.SwaggerSpecialtyGroup"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -187,19 +187,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects"
+                            "$ref": "#/definitions/models.SwaggerGroupWithSubjects"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -263,14 +263,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialty"
+                                "$ref": "#/definitions/models.SwaggerSpecialty"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -292,14 +292,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSubject"
+                                "$ref": "#/definitions/models.SwaggerSubject"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -373,14 +373,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity"
+                                "$ref": "#/definitions/models.SwaggerUniversity"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -410,19 +410,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversityDetail"
+                            "$ref": "#/definitions/models.SwaggerUniversityDetail"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -442,7 +442,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Map130_universities_internal_models.HealthResponse"
+                            "$ref": "#/definitions/models.HealthResponse"
                         }
                     }
                 }
@@ -450,13 +450,13 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_Map130_universities_internal_models.CalculatorResponse": {
+        "models.CalculatorResponse": {
             "type": "object",
             "properties": {
                 "results": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_Map130_universities_internal_models.CalculatorResult"
+                        "$ref": "#/definitions/models.CalculatorResult"
                     }
                 },
                 "score": {
@@ -467,27 +467,27 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.CalculatorResult": {
+        "models.CalculatorResult": {
             "type": "object",
             "properties": {
                 "grant": {
                     "type": "boolean"
                 },
                 "group": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.GroupShort"
+                    "$ref": "#/definitions/models.GroupShort"
                 },
                 "offer": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.OfferInfo"
+                    "$ref": "#/definitions/models.OfferInfo"
                 },
                 "specialty": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SpecialtyShort"
+                    "$ref": "#/definitions/models.SpecialtyShort"
                 },
                 "university": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.UniversityShort"
+                    "$ref": "#/definitions/models.UniversityShort"
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.ErrorResponse": {
+        "models.ErrorResponse": {
             "description": "Стандартный ответ при ошибке",
             "type": "object",
             "properties": {
@@ -497,18 +497,18 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.GroupShort": {
+        "models.GroupShort": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "string"
                 },
                 "name": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
+                    "$ref": "#/definitions/models.LocalizedName"
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.HealthResponse": {
+        "models.HealthResponse": {
             "description": "Ответ healthcheck-эндпоинта",
             "type": "object",
             "properties": {
@@ -522,7 +522,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.LocalizedName": {
+        "models.LocalizedName": {
             "type": "object",
             "properties": {
                 "en": {
@@ -536,7 +536,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.OfferInfo": {
+        "models.OfferInfo": {
             "type": "object",
             "properties": {
                 "grant_count": {
@@ -556,33 +556,33 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SpecialtyShort": {
+        "models.SpecialtyShort": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "string"
                 },
                 "name": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
+                    "$ref": "#/definitions/models.LocalizedName"
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects": {
+        "models.SwaggerGroupWithSubjects": {
             "description": "Группа ОП с привязанными предметами ЕНТ",
             "type": "object",
             "properties": {
                 "group": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup"
+                    "$ref": "#/definitions/models.SwaggerSpecialtyGroup"
                 },
                 "subjects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerRequiredSubject"
+                        "$ref": "#/definitions/models.SwaggerRequiredSubject"
                     }
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerLocalizedName": {
+        "models.SwaggerLocalizedName": {
             "description": "Локализованное название (kz / ru / en)",
             "type": "object",
             "properties": {
@@ -600,7 +600,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty": {
+        "models.SwaggerOfferWithSpecialty": {
             "description": "Предложение вуза (связь offers) с развёрнутой специальностью",
             "type": "object",
             "properties": {
@@ -629,7 +629,7 @@ const docTemplate = `{
                     "example": 80
                 },
                 "out": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialty"
+                    "$ref": "#/definitions/models.SwaggerSpecialty"
                 },
                 "quota_grant_count": {
                     "type": "integer",
@@ -645,7 +645,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerRequiredSubject": {
+        "models.SwaggerRequiredSubject": {
             "description": "Требуемый предмет ЕНТ для группы ОП",
             "type": "object",
             "properties": {
@@ -662,7 +662,7 @@ const docTemplate = `{
                     "example": "specialty_group:b057"
                 },
                 "out": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerSubject"
+                    "$ref": "#/definitions/models.SwaggerSubject"
                 },
                 "priority": {
                     "type": "integer",
@@ -678,7 +678,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerSpecialty": {
+        "models.SwaggerSpecialty": {
             "description": "Специальность / образовательная программа",
             "type": "object",
             "properties": {
@@ -699,7 +699,7 @@ const docTemplate = `{
                     "example": "specialty:xyz789"
                 },
                 "name": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName"
+                    "$ref": "#/definitions/models.SwaggerLocalizedName"
                 },
                 "updated_at": {
                     "type": "string",
@@ -707,7 +707,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup": {
+        "models.SwaggerSpecialtyGroup": {
             "description": "Группа образовательных программ",
             "type": "object",
             "properties": {
@@ -724,7 +724,7 @@ const docTemplate = `{
                     "example": "specialty_group:b057"
                 },
                 "name": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName"
+                    "$ref": "#/definitions/models.SwaggerLocalizedName"
                 },
                 "updated_at": {
                     "type": "string",
@@ -732,7 +732,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerSubject": {
+        "models.SwaggerSubject": {
             "description": "Предмет ЕНТ",
             "type": "object",
             "properties": {
@@ -749,7 +749,7 @@ const docTemplate = `{
                     "example": "subject:math"
                 },
                 "name": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName"
+                    "$ref": "#/definitions/models.SwaggerLocalizedName"
                 },
                 "updated_at": {
                     "type": "string",
@@ -757,7 +757,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerUniversity": {
+        "models.SwaggerUniversity": {
             "description": "Университет Казахстана",
             "type": "object",
             "properties": {
@@ -790,7 +790,7 @@ const docTemplate = `{
                     "example": "http://localhost:9000/logos/abc.png"
                 },
                 "name": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName"
+                    "$ref": "#/definitions/models.SwaggerLocalizedName"
                 },
                 "type": {
                     "type": "string",
@@ -810,22 +810,22 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.SwaggerUniversityDetail": {
+        "models.SwaggerUniversityDetail": {
             "description": "Детальная информация о вузе с его специальностями",
             "type": "object",
             "properties": {
                 "offers": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty"
+                        "$ref": "#/definitions/models.SwaggerOfferWithSpecialty"
                     }
                 },
                 "university": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity"
+                    "$ref": "#/definitions/models.SwaggerUniversity"
                 }
             }
         },
-        "github_com_Map130_universities_internal_models.UniversityShort": {
+        "models.UniversityShort": {
             "type": "object",
             "properties": {
                 "abbr": {
@@ -838,7 +838,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
-                    "$ref": "#/definitions/github_com_Map130_universities_internal_models.LocalizedName"
+                    "$ref": "#/definitions/models.LocalizedName"
                 },
                 "type": {
                     "type": "string"
@@ -851,7 +851,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "10.114.0.2",
+	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{"http", "https"},
 	Title:            "Universities KZ API",
