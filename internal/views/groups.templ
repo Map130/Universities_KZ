@@ -1,0 +1,62 @@
+package views
+
+import (
+	"fmt"
+	"github.com/Map130/universities/internal/models"
+)
+
+templ GroupsPage(groups []models.SpecialtyGroup, page int) {
+	@BaseLayout("Группы ОП - Universities KZ") {
+		<div style="max-width: 1000px; margin: 0 auto; padding: 2rem 0;">
+			<div style="margin-bottom: 2rem;">
+				<h1 style="font-size: 2rem;">Группы образовательных программ</h1>
+				<p style="color: #64748b; margin-top: 0.5rem;">Каталог групп ОП и требуемые для них предметы ЕНТ.</p>
+			</div>
+
+			if len(groups) == 0 {
+				<div style="text-align: center; padding: 3rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+					<h3 style="color: #475569; font-size: 1.25rem;">Группы не найдены</h3>
+					if page > 1 {
+						<p style="color: #64748b; margin-top: 0.5rem; margin-bottom: 1.5rem;">Возможно, вы долистали до конца списка.</p>
+						<a href={ templ.SafeURL(fmt.Sprintf("/groups?page=%d", page-1)) } style="display: inline-block; background: white; color: var(--text-color); border: 1px solid #cbd5e1; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; text-decoration: none;">&larr; Назад</a>
+					}
+				</div>
+			} else {
+				<div class="card-grid">
+					for _, group := range groups {
+						<div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+							<div>
+								<div style="display: inline-block; background: #eff6ff; color: #3b82f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+									{ group.Code }
+								</div>
+								<h2 style="font-size: 1.25rem; margin-bottom: 0.5rem; line-height: 1.4;">
+									{ group.Name.RU }
+								</h2>
+							</div>
+						</div>
+					}
+				</div>
+				
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem;">
+					if page > 1 {
+						<a href={ templ.SafeURL(fmt.Sprintf("/groups?page=%d", page-1)) } style="display: inline-block; background: white; color: var(--text-color); border: 1px solid #cbd5e1; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; text-decoration: none;">
+							&larr; Назад
+						</a>
+					} else {
+						<div></div> <!-- Spacer -->
+					}
+					
+					<span style="color: #64748b; font-size: 0.875rem;">Страница { fmt.Sprintf("%d", page) }</span>
+					
+					if len(groups) == 20 {
+						<a href={ templ.SafeURL(fmt.Sprintf("/groups?page=%d", page+1)) } style="display: inline-block; background: white; color: var(--text-color); border: 1px solid #cbd5e1; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; text-decoration: none;">
+							Вперед &rarr;
+						</a>
+					} else {
+						<div></div> <!-- Spacer -->
+					}
+				</div>
+			}
+		</div>
+	}
+}

@@ -120,7 +120,7 @@ func main() {
 	app.Static("/static", "./static")
 
 	// ── Web (SSR Frontend) ──────────────────────────────────
-	web.RegisterWebRoutes(app, uniRepo)
+	web.RegisterWebRoutes(app, uniRepo, calcRepo, subjectRepo, groupRepo)
 
 	// ── Swagger UI ──────────────────────────────────────────
 	app.Get("/swagger/*", swagger.HandlerDefault)
