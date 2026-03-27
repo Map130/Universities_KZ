@@ -9,16 +9,22 @@ import (
 )
 
 type WebHandler struct {
-	UniRepo repository.UniversityRepository
+	UniRepo  repository.UniversityRepository
+	CalcRepo repository.CalculatorRepository
+	SubjRepo repository.SubjectRepository
 }
 
-func RegisterWebRoutes(app *fiber.App, uniRepo repository.UniversityRepository) {
+func RegisterWebRoutes(app *fiber.App, uniRepo repository.UniversityRepository, calcRepo repository.CalculatorRepository, subjRepo repository.SubjectRepository) {
 	h := &WebHandler{
-		UniRepo: uniRepo,
+		UniRepo:  uniRepo,
+		CalcRepo: calcRepo,
+		SubjRepo: subjRepo,
 	}
 
 	app.Get("/", h.HomeHandler)
 	app.Get("/universities", h.UniversitiesHandler)
+	app.Get("/calculator", h.CalculatorHandler)
+	app.Get("/calculator/results", h.CalculatorResultsHandler)
 }
 
 func (h *WebHandler) HomeHandler(c *fiber.Ctx) error {
@@ -35,3 +41,28 @@ func (h *WebHandler) UniversitiesHandler(c *fiber.Ctx) error {
 	}
 	return Render(c, views.Universities(unis))
 }
+
+func (h *WebHandler) CalculatorHandler(c *fiber.Ctx) error {
+	subjects, err := h.SubjRepo.GetAll(c.Context())
+	if err != nil {
+		return c.Status(500).SendString("Ошибка загрузки предметов")
+	}
+	return Render(c, views.CalculatorPage(subjects))
+}
+
+func (h *WebHandler) CalculatorResultsHandler(c *fiber.Ctx) error {
+	req := models.CalculatorRequest{
+		Score:    c.QueryInt("score", 0),
+		Subject1: c.Query("subject1"),
+		Subject2: c.Query("subject2"),
+		City:     c.Query("city"),
+	}
+	
+	results, err := h.CalcRepo.Calculate(c.Context(), req)
+	if err != nil {
+		return c.Status(500).SendString("Ошибка расчета")
+	}
+	
+	return Render(c, views.CalculatorResults(results))
+}
+
