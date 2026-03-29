@@ -8,21 +8,22 @@ import (
 templ Universities(unis []models.University) {
 	@BaseLayout("Каталог вузов - Universities KZ") {
 		<div style="margin-bottom: 2rem;">
-			<h1 style="font-size: 2rem; margin-bottom: 1.5rem;">Каталог университетов</h1>
+			<h1 style="margin-bottom: 0.5rem;">Каталог университетов</h1>
+			<p style="color: var(--text-muted); margin-bottom: 2rem;">Найдите подходящий вуз для поступления в Казахстане</p>
 			
-			<div class="card" style="padding: 1.5rem; margin-bottom: 2rem; background: #f8fafc;">
-				<form hx-get="/universities" hx-target="#university-list" hx-push-url="true" hx-trigger="input changed delay:300ms, search, change" class="grid-auto-fit">
+			<div class="card" style="padding: 1.5rem; margin-bottom: 2rem;">
+				<form hx-get="/universities" hx-target="#university-list" hx-push-url="true" hx-trigger="input changed delay:500ms, search, change" hx-indicator="#university-list-indicator" class="grid-auto-fit" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
 					<div>
-						<label for="search" style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">Поиск по названию</label>
-						<input type="text" id="search" name="search" placeholder="Напр: МУИТ" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px;"/>
+						<label for="search" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Название или аббревиатура</label>
+						<input type="text" id="search" name="search" placeholder="Напр: КазНУ" class="input"/>
 					</div>
 					<div>
-						<label for="city" style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">Город</label>
-						<input type="text" id="city" name="city" placeholder="Напр: Алматы" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px;"/>
+						<label for="city" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Город</label>
+						<input type="text" id="city" name="city" placeholder="Алматы" class="input"/>
 					</div>
 					<div>
-						<label for="type" style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">Тип вуза</label>
-						<select id="type" name="type" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+						<label for="type" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Тип учебного заведения</label>
+						<select id="type" name="type" class="input" style="background: white;">
 							<option value="">Все типы</option>
 							<option value="public">Государственный</option>
 							<option value="private">Частный</option>
@@ -32,6 +33,10 @@ templ Universities(unis []models.University) {
 			</div>
 		</div>
 
+		<div id="university-list-indicator" class="htmx-indicator" style="text-align: center; margin-bottom: 1rem; color: var(--primary); font-weight: 600;">
+			Загрузка вузов...
+		</div>
+
 		<div id="university-list">
 			@UniversityList(unis)
 		</div>
@@ -39,31 +44,44 @@ templ Universities(unis []models.University) {
 }
 
 templ UniversityList(unis []models.University) {
-	<div style="margin-bottom: 1rem; color: #64748b; font-size: 0.875rem;">
+	<div style="margin-bottom: 1.5rem; color: var(--text-muted); font-size: 0.875rem; font-weight: 500;">
 		Найдено вузов: { fmt.Sprintf("%d", len(unis)) }
 	</div>
 	
 	if len(unis) == 0 {
-		<div style="text-align: center; padding: 3rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; color: #64748b;">
-			По вашему запросу ничего не найдено.
+		<div style="text-align: center; padding: 4rem 2rem; background: white; border-radius: 0.75rem; border: 2px dashed var(--border-color); color: var(--text-muted);">
+			<div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+			<h3>Ничего не найдено</h3>
+			<p>Попробуйте изменить параметры поиска или фильтры</p>
 		</div>
 	} else {
 		<div class="card-grid">
 			for _, uni := range unis {
 				<div class="card">
-					<h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">
+					<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+						if uni.Abbr != "" {
+							<span class="badge badge-primary">{ uni.Abbr }</span>
+						}
+						<span class="badge">{ string(uni.Type) }</span>
+					</div>
+					
+					<h3 style="font-size: 1.125rem; margin-bottom: 1rem; line-height: 1.4;">
 						if uni.ID != nil {
-							<a href={ templ.SafeURL(fmt.Sprintf("/universities/%v", uni.ID.ID)) }>{ uni.Name.RU }</a>
+							<a href={ templ.SafeURL(fmt.Sprintf("/universities/%v", uni.ID.ID)) } style="color: var(--text-main); text-decoration: none;">{ uni.Name.RU }</a>
 						} else {
 							{ uni.Name.RU }
 						}
-					</h2>
-					<div style="color: #64748b; font-size: 0.875rem; margin-bottom: 1rem;">
-						<span>📍 { uni.City }</span> • <span>🏢 { string(uni.Type) }</span>
+					</h3>
+					
+					<div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); font-size: 0.875rem;">
+						<span style="font-size: 1rem;">📍</span> { uni.City }
 					</div>
-					if uni.Abbr != "" {
-						<span style="display: inline-block; background: #eff6ff; color: #3b82f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">{ uni.Abbr }</span>
-					}
+					
+					<div style="margin-top: 1.5rem;">
+						if uni.ID != nil {
+							<a href={ templ.SafeURL(fmt.Sprintf("/universities/%v", uni.ID.ID)) } class="btn btn-outline" style="width: 100%;">Подробнее</a>
+						}
+					</div>
 				</div>
 			}
 		</div>
