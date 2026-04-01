@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Map130/universities/internal/repository"
 	"github.com/gofiber/fiber/v2"
+	surrealmodels "github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
 // WebhookRepos defines the interface for repositories needed during sync
@@ -72,17 +74,92 @@ func FullSyncHandler(repos WebhookRepos, gitClient *GitClient) fiber.Handler {
 
 // syncChangedFiles processes a push event and syncs changed files
 func syncChangedFiles(ctx context.Context, event *PushEvent, repos WebhookRepos, gitClient *GitClient) SyncResults {
-	// TODO: Implement file sync logic
-	// 1. Extract added/modified/removed files from event.Commits
-	// 2. Deduplicate files
-	// 3. Fetch content using GitClient for added/modified files
-	// 4. Validate against JSON schemas
-	// 5. Update or Delete in database using WebhookRepos
-
-	return SyncResults{
+	results := SyncResults{
 		Total:   0,
 		Success: 0,
 		Errors:  []string{},
+	}
+
+	expectedRef := "refs/heads/" + gitClient.Branch
+	if event.Ref != expectedRef {
+		results.Errors = append(results.Errors, fmt.Sprintf("ignored push to %s, expected %s", event.Ref, expectedRef))
+		return results
+	}
+
+	addedOrModified := make(map[string]bool)
+	removed := make(map[string]bool)
+
+	for _, commit := range event.Commits {
+		for _, file := range commit.Added {
+			addedOrModified[file] = true
+			delete(removed, file)
+		}
+		for _, file := range commit.Modified {
+			addedOrModified[file] = true
+			delete(removed, file)
+		}
+		for _, file := range commit.Removed {
+			removed[file] = true
+			delete(addedOrModified, file)
+		}
+	}
+
+	for file := range addedOrModified {
+		if !strings.HasPrefix(file, "data/") {
+			continue
+		}
+		if !strings.HasSuffix(file, ".yml") && !strings.HasSuffix(file, ".yaml") {
+			continue
+		}
+
+		results.Total++
+		content, err := gitClient.FetchFileContent(ctx, file)
+		if err != nil {
+			results.Errors = append(results.Errors, fmt.Sprintf("failed to fetch %s: %v", file, err))
+			continue
+		}
+
+		err = processFile(ctx, file, content, repos)
+		if err != nil {
+			results.Errors = append(results.Errors, fmt.Sprintf("failed to process %s: %v", file, err))
+		} else {
+			results.Success++
+		}
+	}
+
+	for file := range removed {
+		if !strings.HasPrefix(file, "data/") {
+			continue
+		}
+		if !strings.HasSuffix(file, ".yml") && !strings.HasSuffix(file, ".yaml") {
+			continue
+		}
+
+		results.Total++
+		err := deleteFileRecord(ctx, file, repos)
+		if err != nil {
+			results.Errors = append(results.Errors, fmt.Sprintf("failed to delete %s: %v", file, err))
+		} else {
+			results.Success++
+		}
+	}
+
+	return results
+}
+
+func deleteFileRecord(ctx context.Context, filename string, repos WebhookRepos) error {
+	idStr := extractID(filename)
+	switch {
+	case strings.Contains(filename, "/data/universities/") || strings.HasPrefix(filename, "data/universities/"):
+		return repos.Universities().Delete(ctx, surrealmodels.NewRecordID("university", idStr))
+	case strings.Contains(filename, "/data/specialties/") || strings.HasPrefix(filename, "data/specialties/"):
+		return repos.Specialties().Delete(ctx, surrealmodels.NewRecordID("specialty", idStr))
+	case strings.Contains(filename, "/data/groups/") || strings.HasPrefix(filename, "data/groups/"):
+		return repos.Groups().Delete(ctx, surrealmodels.NewRecordID("specialty_group", idStr))
+	case strings.Contains(filename, "/data/subjects/") || strings.HasPrefix(filename, "data/subjects/"):
+		return repos.Subjects().Delete(ctx, surrealmodels.NewRecordID("subject", idStr))
+	default:
+		return nil
 	}
 }
 

@@ -87,13 +87,13 @@ func extractID(filename string) string {
 // processFile routes the file content to the appropriate processor based on its path
 func processFile(ctx context.Context, filename string, content []byte, repos WebhookRepos) error {
 	switch {
-	case strings.Contains(filename, "/data/universities/"):
+	case strings.Contains(filename, "/data/universities/") || strings.HasPrefix(filename, "data/universities/"):
 		return processUniversity(ctx, filename, content, repos)
-	case strings.Contains(filename, "/data/specialties/"):
+	case strings.Contains(filename, "/data/specialties/") || strings.HasPrefix(filename, "data/specialties/"):
 		return processSpecialty(ctx, filename, content, repos)
-	case strings.Contains(filename, "/data/groups/"):
+	case strings.Contains(filename, "/data/groups/") || strings.HasPrefix(filename, "data/groups/"):
 		return processGroup(ctx, filename, content, repos)
-	case strings.Contains(filename, "/data/subjects/"):
+	case strings.Contains(filename, "/data/subjects/") || strings.HasPrefix(filename, "data/subjects/"):
 		return processSubject(ctx, filename, content, repos)
 	default:
 		return nil
