@@ -4,7 +4,7 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync/atomic"
 
 	"github.com/surrealdb/surrealdb.go"
@@ -68,7 +68,7 @@ func NewPool(ctx context.Context, cfg PoolConfig) (*Pool, error) {
 		conns = append(conns, conn)
 	}
 
-	log.Printf("[db.Pool] created pool with %d connections to %s", size, cfg.Config.URL)
+	slog.Info("created database pool", "size", size, "url", cfg.Config.URL)
 
 	return &Pool{
 		conns: conns,
@@ -98,7 +98,7 @@ func (p *Pool) Close(ctx context.Context) error {
 			firstErr = fmt.Errorf("db.Pool: close connection %d: %w", i, err)
 		}
 	}
-	log.Printf("[db.Pool] closed %d connections", p.size)
+	slog.Info("closed database pool", "size", p.size)
 	return firstErr
 }
 

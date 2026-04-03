@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"runtime"
@@ -26,7 +26,8 @@ import (
 func requireEnv(key string) string {
 	value, ok := os.LookupEnv(key)
 	if !ok || value == "" {
-		log.Fatalf("FATAL: обязательная переменная окружения %s не задана", key)
+		slog.Error("FATAL: обязательная переменная окружения не задана", "key", key)
+		os.Exit(1)
 	}
 	return value
 }
@@ -59,6 +60,10 @@ func (w *webhookReposImpl) Subjects() repository.SubjectRepository        { retu
 
 // @schemes   http https
 func main() {
+	// Настройка логгера JSON (с выводом в os.Stdout)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	slog.SetDefault(logger)
+
 	dbCfg := db.Config{
 		URL:       requireEnv("SURREAL_URL"),
 		User:      requireEnv("SURREAL_USER"),
@@ -83,11 +88,13 @@ func main() {
 		Size:   poolSize,
 	})
 	if err != nil {
-		log.Fatalf("Ошибка создания пула подключений к SurrealDB: %v", err)
+		slog.Error("Ошибка создания пула подключений к SurrealDB", "error", err)
+		os.Exit(1)
 	}
 
 	if err := db.RunMigrationsOnPool(ctx, pool); err != nil {
-		log.Fatalf("Ошибка миграции схемы: %v", err)
+		slog.Error("Ошибка миграции схемы", "error", err)
+		os.Exit(1)
 	}
 
 	// Инициализация репозиториев (используют пул подключений)
@@ -97,7 +104,7 @@ func main() {
 	subjectRepo := repository.NewSubjectRepository(pool)
 	calcRepo := repository.NewCalculatorRepository(pool)
 
-	log.Println("[app] repositories initialized")
+	slog.Info("repositories initialized")
 
 	// ── Handler (все хендлеры в одном месте) ─────────────────
 	h := handlers.NewHandler(uniRepo, groupRepo, specRepo, subjectRepo, calcRepo)
@@ -177,23 +184,23 @@ func main() {
 		app.Post("/webhook/sync", webhook.FullSyncHandler(reposImpl, gitClient))
 
 		// Startup Sync
-		log.Println("[app] starting initial data sync from GitHub...")
+		slog.Info("starting initial data sync from GitHub")
 		syncCtx, syncCancel := context.WithTimeout(ctx, 5*time.Minute)
 
 		tarStream, err := gitClient.FetchTarball(syncCtx)
 		if err != nil {
-			log.Printf("[app] Ошибка загрузки данных из Git: %v", err)
+			slog.Error("Ошибка загрузки данных из Git", "error", err)
 		} else {
 			if err := webhook.ProcessTarball(syncCtx, tarStream, reposImpl); err != nil {
-				log.Printf("[app] Ошибка обработки данных из Git: %v", err)
+				slog.Error("Ошибка обработки данных из Git", "error", err)
 			} else {
-				log.Println("[app] initial data sync completed successfully")
+				slog.Info("initial data sync completed successfully")
 			}
 			_ = tarStream.Close()
 		}
 		syncCancel()
 	} else {
-		log.Println("[app] skipping GitHub sync and webhooks: missing GITHUB_OWNER, GITHUB_REPO, or GITHUB_BRANCH")
+		slog.Warn("skipping GitHub sync and webhooks: missing GITHUB_OWNER, GITHUB_REPO, or GITHUB_BRANCH")
 	}
 
 	// ── Graceful Shutdown ───────────────────────────────────
@@ -202,25 +209,26 @@ func main() {
 
 	go func() {
 		if err := app.Listen(":" + appPort); err != nil {
-			log.Fatalf("Ошибка запуска сервера: %v", err)
+			slog.Error("Ошибка запуска сервера", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	log.Printf("[app] listening on :%s", appPort)
-	log.Printf("[app] Swagger UI available at http://localhost:%s/swagger/index.html", appPort)
+	slog.Info("server listening", "port", appPort)
+	slog.Info("Swagger UI available", "url", "http://localhost:"+appPort+"/swagger/index.html")
 
 	<-quit
-	log.Println("[app] shutting down...")
+	slog.Info("shutting down server")
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	if err := app.ShutdownWithContext(shutdownCtx); err != nil {
-		log.Printf("[app] server shutdown error: %v", err)
+		slog.Error("server shutdown error", "error", err)
 	}
 	if err := pool.Close(shutdownCtx); err != nil {
-		log.Printf("[app] db pool close error: %v", err)
+		slog.Error("db pool close error", "error", err)
 	}
 
-	log.Println("[app] stopped")
+	slog.Info("server stopped")
 }

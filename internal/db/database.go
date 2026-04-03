@@ -5,7 +5,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -55,7 +55,7 @@ func Connect(ctx context.Context, cfg Config) (*surrealdb.DB, error) {
 		return nil, fmt.Errorf("db: use %s/%s: %w", cfg.Namespace, cfg.Database, err)
 	}
 
-	log.Printf("[db] connected to %s  ns=%s  db=%s", cfg.URL, cfg.Namespace, cfg.Database)
+	slog.Info("connected to surrealdb", "url", cfg.URL, "ns", cfg.Namespace, "db", cfg.Database)
 	return db, nil
 }
 
@@ -76,6 +76,6 @@ func RunMigrations(ctx context.Context, db *surrealdb.DB) error {
 		return fmt.Errorf("db: run migrations: %w", err)
 	}
 
-	log.Println("[db] schema migrations applied successfully")
+	slog.Info("schema migrations applied successfully")
 	return nil
 }
