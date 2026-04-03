@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +55,7 @@ func ProcessTarball(ctx context.Context, stream io.Reader, repos WebhookRepos) e
 
 		content, err := io.ReadAll(tr)
 		if err != nil {
-			log.Printf("[sync] failed to read file %s: %v", header.Name, err)
+			slog.Error("failed to read file", "file", header.Name, "error", err)
 			continue
 		}
 
@@ -72,7 +72,7 @@ func ProcessTarball(ctx context.Context, stream io.Reader, repos WebhookRepos) e
 		}
 
 		if err != nil {
-			log.Printf("[sync] failed to process %s: %v", header.Name, err)
+			slog.Error("failed to process file", "file", header.Name, "error", err)
 		}
 	}
 
