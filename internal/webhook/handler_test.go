@@ -95,7 +95,7 @@ func TestSyncChangedFiles_ProcessAddedAndRemoved(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/owner/repo/main/data/universities/added.yml" {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`
+			_, _ = w.Write([]byte(`
 name:
   ru: "Тестовый ВУЗ"
 abbr: "TEST"
