@@ -6,24 +6,33 @@ import (
 )
 
 templ Universities(unis []models.University) {
-	@BaseLayout("Каталог вузов - Universities KZ") {
-		<div style="margin-bottom: 2rem;">
-			<h1 style="margin-bottom: 0.5rem;">Каталог университетов</h1>
-			<p style="color: var(--text-muted); margin-bottom: 2rem;">Найдите подходящий вуз для поступления в Казахстане</p>
-			
-			<div class="card" style="padding: 1.5rem; margin-bottom: 2rem;">
-				<form hx-get="/universities" hx-target="#university-list" hx-push-url="true" hx-trigger="input changed delay:500ms, search, change" hx-indicator="#university-list-indicator" class="grid-auto-fit" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-					<div>
-						<label for="search" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Название или аббревиатура</label>
-						<input type="text" id="search" name="search" placeholder="Напр: КазНУ" class="input"/>
+	@BaseLayout("Вузы — UniSearch") {
+		<div class="container">
+			<div class="page-header">
+				<h1>Университеты Казахстана</h1>
+				<p>Государственные и частные вузы — фильтруй по городу, типу или названию</p>
+			</div>
+
+			<div class="filter-bar">
+				<form
+					hx-get="/universities"
+					hx-target="#university-list"
+					hx-push-url="true"
+					hx-trigger="input changed delay:500ms, search, change"
+					hx-indicator="#uni-loading"
+					class="filter-grid"
+				>
+					<div class="form-group">
+						<label for="search" class="form-label">Название или аббревиатура</label>
+						<input type="text" id="search" name="search" placeholder="КазНУ, МУИТ..." class="input"/>
 					</div>
-					<div>
-						<label for="city" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Город</label>
-						<input type="text" id="city" name="city" placeholder="Алматы" class="input"/>
+					<div class="form-group">
+						<label for="city" class="form-label">Город</label>
+						<input type="text" id="city" name="city" placeholder="Алматы, Астана..." class="input"/>
 					</div>
-					<div>
-						<label for="type" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Тип учебного заведения</label>
-						<select id="type" name="type" class="input" style="background: white;">
+					<div class="form-group">
+						<label for="type" class="form-label">Тип</label>
+						<select id="type" name="type" class="select">
 							<option value="">Все типы</option>
 							<option value="public">Государственный</option>
 							<option value="private">Частный</option>
@@ -31,55 +40,72 @@ templ Universities(unis []models.University) {
 					</div>
 				</form>
 			</div>
-		</div>
 
-		<div id="university-list-indicator" class="htmx-indicator" style="text-align: center; margin-bottom: 1rem; color: var(--primary); font-weight: 600;">
-			Загрузка вузов...
-		</div>
+			<div id="uni-loading" class="htmx-indicator loading-text">
+				Загружаем вузы...
+			</div>
 
-		<div id="university-list">
-			@UniversityList(unis)
+			<div id="university-list">
+				@UniversityList(unis)
+			</div>
 		</div>
 	}
 }
 
 templ UniversityList(unis []models.University) {
-	<div style="margin-bottom: 1.5rem; color: var(--text-muted); font-size: 0.875rem; font-weight: 500;">
-		Найдено вузов: { fmt.Sprintf("%d", len(unis)) }
+	<div class="results-count">
+		Найдено: <strong>{ fmt.Sprintf("%d", len(unis)) }</strong>
 	</div>
-	
+
 	if len(unis) == 0 {
-		<div style="text-align: center; padding: 4rem 2rem; background: white; border-radius: 0.75rem; border: 2px dashed var(--border-color); color: var(--text-muted);">
-			<div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+		<div class="empty-state">
+			<div class="empty-state__icon">🔍</div>
 			<h3>Ничего не найдено</h3>
-			<p>Попробуйте изменить параметры поиска или фильтры</p>
+			<p>Попробуй изменить параметры поиска или фильтры</p>
 		</div>
 	} else {
 		<div class="card-grid">
 			for _, uni := range unis {
-				<div class="card">
-					<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-						if uni.Abbr != "" {
-							<span class="badge badge-primary">{ uni.Abbr }</span>
-						}
-						<span class="badge">{ string(uni.Type) }</span>
+				<div class="uni-card">
+					<div class="uni-card__top">
+						<div class="uni-card__logo">
+							if uni.LogoURL != nil {
+								<img src={ *uni.LogoURL } alt={ uni.Abbr }/>
+							} else if uni.Abbr != "" {
+								<span class="uni-card__logo-placeholder">{ string([]rune(uni.Abbr)[:1]) }</span>
+							} else {
+								<span class="uni-card__logo-placeholder">U</span>
+							}
+						</div>
+						<div class="uni-card__badges">
+							if uni.Type == "public" {
+								<span class="badge badge-public">Государственный</span>
+							} else {
+								<span class="badge badge-private">Частный</span>
+							}
+						</div>
 					</div>
-					
-					<h3 style="font-size: 1.125rem; margin-bottom: 1rem; line-height: 1.4;">
+
+					<div class="uni-card__name">
 						if uni.ID != nil {
-							<a href={ templ.SafeURL(fmt.Sprintf("/universities/%v", uni.ID.ID)) } style="color: var(--text-main); text-decoration: none;">{ uni.Name.RU }</a>
+							<a href={ templ.SafeURL(fmt.Sprintf("/universities/%v", uni.ID.ID)) } style="color: inherit;">{ uni.Name.RU }</a>
 						} else {
 							{ uni.Name.RU }
 						}
-					</h3>
-					
-					<div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); font-size: 0.875rem;">
-						<span style="font-size: 1rem;">📍</span> { uni.City }
 					</div>
-					
-					<div style="margin-top: 1.5rem;">
+
+					<div class="uni-card__meta">
+						<span>📍 { uni.City }</span>
+						if uni.Abbr != "" {
+							<span class="badge badge-primary">{ uni.Abbr }</span>
+						}
+					</div>
+
+					<div class="uni-card__bottom">
 						if uni.ID != nil {
-							<a href={ templ.SafeURL(fmt.Sprintf("/universities/%v", uni.ID.ID)) } class="btn btn-outline" style="width: 100%;">Подробнее</a>
+							<a href={ templ.SafeURL(fmt.Sprintf("/universities/%v", uni.ID.ID)) } class="btn btn-secondary btn-sm btn-full">
+								Подробнее →
+							</a>
 						}
 					</div>
 				</div>

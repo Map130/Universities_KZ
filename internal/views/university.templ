@@ -6,80 +6,85 @@ import (
 )
 
 templ UniversityDetail(detail models.UniversityDetail) {
-	@BaseLayout(fmt.Sprintf("%s - Universities KZ", detail.University.Name.RU)) {
-		<div style="max-width: 1000px; margin: 0 auto; padding: 2rem 0;">
-			<div class="card" style="margin-bottom: 2rem; padding: 2rem;">
-				<div class="flex-col-mobile">
+	@BaseLayout(fmt.Sprintf("%s — UniSearch", detail.University.Name.RU)) {
+		<div class="container">
+			<div style="margin-bottom: 1.25rem;">
+				<a href="/universities" class="btn btn-ghost btn-sm">← Все вузы</a>
+			</div>
+
+			<div class="uni-header">
+				<div class="uni-header__logo">
 					if detail.University.LogoURL != nil {
-						<div style="flex-shrink: 0; width: 120px; height: 120px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; background: white; padding: 0.5rem;">
-							<img src={ *detail.University.LogoURL } alt="Логотип" style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
-						</div>
+						<img src={ *detail.University.LogoURL } alt="Логотип"/>
+					} else if detail.University.Abbr != "" {
+						{ string([]rune(detail.University.Abbr)[:1]) }
 					} else {
-						<div style="flex-shrink: 0; width: 120px; height: 120px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #94a3b8;">
-							<span>Нет логотипа</span>
-						</div>
+						U
 					}
-					
-					<div style="flex-grow: 1;">
-						<div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-							<h1 style="font-size: 2rem; margin: 0;">{ detail.University.Name.RU }</h1>
-							if detail.University.Abbr != "" {
-								<span style="background: #eff6ff; color: #3b82f6; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 600;">{ detail.University.Abbr }</span>
-							}
-						</div>
-						
-						<div class="flex-col-mobile" style="color: #64748b; margin-bottom: 1.5rem; gap: 1.5rem; font-size: 1rem;">
-							<span>📍 { detail.University.City }</span>
-							<span>🏢 { string(detail.University.Type) }</span>
-							if detail.University.Website != nil {
-								<a href={ templ.SafeURL(*detail.University.Website) } target="_blank" style="color: #3b82f6; text-decoration: underline;">🌐 Официальный сайт</a>
-							}
-						</div>
-						
-						if detail.University.Description != nil {
-							<div style="color: #475569; line-height: 1.6;">
-								{ *detail.University.Description }
-							</div>
+				</div>
+				<div class="uni-header__info">
+					<div class="uni-header__name">
+						{ detail.University.Name.RU }
+						if detail.University.Abbr != "" {
+							<span class="badge badge-primary">{ detail.University.Abbr }</span>
 						}
 					</div>
+					<div class="uni-header__meta">
+						<span class="uni-header__meta-item">📍 { detail.University.City }</span>
+						if detail.University.Type == "public" {
+							<span class="uni-header__meta-item"><span class="badge badge-public">Государственный</span></span>
+						} else {
+							<span class="uni-header__meta-item"><span class="badge badge-private">Частный</span></span>
+						}
+						if detail.University.Website != nil {
+							<a href={ templ.SafeURL(*detail.University.Website) } target="_blank" class="uni-header__meta-item" style="color: var(--color-primary);">
+								🌐 Официальный сайт
+							</a>
+						}
+					</div>
+					if detail.University.Description != nil {
+						<p class="uni-header__desc">{ *detail.University.Description }</p>
+					}
 				</div>
 			</div>
-			
-			<h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Образовательные программы (Специальности)</h2>
-			
+
+			<div class="page-header">
+				<h2>Образовательные программы</h2>
+				<p>{ fmt.Sprintf("%d", len(detail.Offers)) } специальностей в этом вузе</p>
+			</div>
+
 			if len(detail.Offers) == 0 {
-				<div style="text-align: center; padding: 2rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; color: #64748b;">
-					Нет данных о специальностях для данного вуза.
+				<div class="empty-state">
+					<div class="empty-state__icon">📋</div>
+					<h3>Нет данных о специальностях</h3>
+					<p>Информация по этому вузу пока не добавлена</p>
 				</div>
 			} else {
 				<div class="card-grid">
 					for _, offer := range detail.Offers {
-						<div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-							<div style="margin-bottom: 1rem;">
-								<div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Код: { offer.Out.Code }</div>
-								<h3 style="font-size: 1.125rem; font-weight: 600; line-height: 1.4; margin: 0;">{ offer.Out.Name.RU }</h3>
-							</div>
-							
-							<div class="grid-2-col" style="border-top: 1px solid #e2e8f0; padding-top: 1rem; font-size: 0.875rem;">
-								<div>
-									<div style="color: #64748b; margin-bottom: 0.25rem;">Мин. балл ЕНТ</div>
-									<div style="font-weight: 600; color: #0f172a;">{ fmt.Sprintf("%d", offer.MinScore) }</div>
+						<div class="offer-card">
+							<div class="offer-card__code">{ offer.Out.Code }</div>
+							<div class="offer-card__name">{ offer.Out.Name.RU }</div>
+							<div class="offer-stats">
+								<div class="offer-stat">
+									<div class="offer-stat__label">Мин. балл ЕНТ</div>
+									<div class="offer-stat__value">{ fmt.Sprintf("%d", offer.MinScore) }</div>
 								</div>
-								<div>
-									<div style="color: #64748b; margin-bottom: 0.25rem;">Проходной (гранты)</div>
-									<div style="font-weight: 600; color: #166534;">{ fmt.Sprintf("%d", offer.LastYearThreshold) }</div>
+								<div class="offer-stat">
+									<div class="offer-stat__label">Порог гранта</div>
+									<div class="offer-stat__value offer-stat__value--success">{ fmt.Sprintf("%d", offer.LastYearThreshold) }</div>
 								</div>
-								<div>
-									<div style="color: #64748b; margin-bottom: 0.25rem;">Кол-во грантов</div>
-									<div style="font-weight: 600; color: #0f172a;">{ fmt.Sprintf("%d", offer.GrantCount) }</div>
+								<div class="offer-stat">
+									<div class="offer-stat__label">Кол-во грантов</div>
+									<div class="offer-stat__value offer-stat__value--primary">{ fmt.Sprintf("%d", offer.GrantCount) }</div>
 								</div>
-								<div>
-									<div style="color: #64748b; margin-bottom: 0.25rem;">Стоимость (₸/год)</div>
-									<div style="font-weight: 600; color: #0f172a;">
+								<div class="offer-stat">
+									<div class="offer-stat__label">Стоимость (₸/год)</div>
+									<div class="offer-stat__value">
 										if offer.TuitionFee > 0 {
 											{ fmt.Sprintf("%d", offer.TuitionFee) }
 										} else {
-											Неизвестно
+											—
 										}
 									</div>
 								</div>
