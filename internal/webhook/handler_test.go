@@ -40,8 +40,14 @@ func (m *mockUniRepo) Delete(ctx context.Context, id surrealmodels.RecordID) err
 	m.deleted[id.ID.(string)] = true
 	return nil
 }
-func (m *mockUniRepo) CreateOffer(ctx context.Context, universityID, specialtyID surrealmodels.RecordID, input models.CreateOfferInput) (*models.Offers, error) {
+func (m *mockUniRepo) CreateOffer(ctx context.Context, universityID, specialtyID surrealmodels.RecordID) (*models.Offers, error) {
 	return nil, nil
+}
+func (m *mockUniRepo) CreateEntRequirement(ctx context.Context, universityID, groupID surrealmodels.RecordID, input models.CreateEntRequirementInput) (*models.EntRequirement, error) {
+	return nil, nil
+}
+func (m *mockUniRepo) DeleteAllEntRequirements(ctx context.Context, universityID surrealmodels.RecordID) error {
+	return nil
 }
 
 type mockSpecRepo struct {
