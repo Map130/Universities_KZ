@@ -114,12 +114,11 @@ func (r *surrealSubjectRepo) Delete(ctx context.Context, id surrealmodels.Record
 
 // FindUniversitiesBySubject — обратный обход графа:
 //
-//	subject <─requires─ specialty_group <─.group─ specialty <─offers─ university
+//	subject <─requires─ specialty_group <─ent_requirement─ university
 func (r *surrealSubjectRepo) FindUniversitiesBySubject(ctx context.Context, subjectID surrealmodels.RecordID) ([]models.University, error) {
 	query := `
 		LET $group_ids = (SELECT VALUE in FROM requires WHERE out = $subject_id);
-		LET $spec_ids  = (SELECT VALUE id FROM specialty WHERE ` + "`group`" + ` IN $group_ids);
-		LET $uni_ids   = array::distinct((SELECT VALUE in FROM offers WHERE out IN $spec_ids));
+		LET $uni_ids   = array::distinct((SELECT VALUE in FROM ent_requirement WHERE out IN $group_ids));
 		SELECT * FROM university WHERE id IN $uni_ids ORDER BY name.ru ASC;
 	`
 
@@ -135,7 +134,7 @@ func (r *surrealSubjectRepo) FindUniversitiesBySubject(ctx context.Context, subj
 		return []models.University{}, nil
 	}
 
-	// 4 оператора (LET, LET, LET, SELECT) — берём последний.
+	// 3 оператора (LET, LET, SELECT) — берём последний.
 	last := (*results)[len(*results)-1]
 	if last.Error != nil {
 		return nil, fmt.Errorf("subject.FindUniversitiesBySubject: %w", last.Error)

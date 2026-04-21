@@ -231,7 +231,7 @@ REMOVE EVENT IF EXISTS ev_subject_updated ON TABLE subject;
 -- ═════════════════════════════════════════════════════════════
 --  5.  EDGE: offers
 --      university ──offers──▶ specialty
---      «Вуз предлагает специальность с такими условиями»
+--      «Вуз предлагает специальность»
 -- ═════════════════════════════════════════════════════════════
 
 DEFINE TABLE OVERWRITE offers SCHEMAFULL
@@ -241,26 +241,6 @@ DEFINE TABLE OVERWRITE offers SCHEMAFULL
 
 -- Поля in/out создаются автоматически из TYPE RELATION FROM...TO...
 
--- Количество грантов на текущий год приёма --
-DEFINE FIELD OVERWRITE grant_count        ON TABLE offers TYPE int
-    ASSERT $value >= 0;
-
--- Количество грантов по сельской квоте --
-DEFINE FIELD OVERWRITE quota_grant_count  ON TABLE offers TYPE int
-    ASSERT $value >= 0;
-
--- Стоимость обучения (тенге / год), не может быть отрицательной --
-DEFINE FIELD OVERWRITE tuition_fee        ON TABLE offers TYPE int
-    ASSERT $value >= 0;
-
--- Минимальный балл ЕНТ для участия в конкурсе (0–140) --
-DEFINE FIELD OVERWRITE min_score          ON TABLE offers TYPE int
-    ASSERT $value >= 0 AND $value <= 140;
-
--- Проходной балл гранта прошлого года (0–140) --
-DEFINE FIELD OVERWRITE last_year_threshold ON TABLE offers TYPE int
-    ASSERT $value >= 0 AND $value <= 140;
-
 -- Временные метки --
 DEFINE FIELD OVERWRITE created_at         ON TABLE offers TYPE datetime
     DEFAULT time::now();
@@ -269,6 +249,36 @@ DEFINE FIELD OVERWRITE updated_at         ON TABLE offers TYPE datetime
 
 -- updated_at обновляется автоматически через VALUE time::now() на поле.
 REMOVE EVENT IF EXISTS ev_offers_updated ON TABLE offers;
+
+
+-- ═════════════════════════════════════════════════════════════
+--  5.5.  EDGE: ent_requirement
+--        university ──ent_requirement──▶ specialty_group
+--        «Вуз устанавливает проходные баллы на ГОП»
+-- ═════════════════════════════════════════════════════════════
+
+DEFINE TABLE OVERWRITE ent_requirement SCHEMAFULL
+    TYPE RELATION FROM university TO specialty_group
+    PERMISSIONS
+        FOR select, create, update, delete FULL;
+
+-- Поля in/out создаются автоматически из TYPE RELATION FROM...TO...
+
+-- Минимальный балл ЕНТ для участия в конкурсе (0–140) --
+DEFINE FIELD OVERWRITE min_score          ON TABLE ent_requirement TYPE int
+    ASSERT $value >= 0 AND $value <= 140;
+
+-- Проходной балл гранта прошлого года (0–140) --
+DEFINE FIELD OVERWRITE last_year_threshold ON TABLE ent_requirement TYPE int
+    ASSERT $value >= 0 AND $value <= 140;
+
+-- Временные метки --
+DEFINE FIELD OVERWRITE created_at         ON TABLE ent_requirement TYPE datetime
+    DEFAULT time::now();
+DEFINE FIELD OVERWRITE updated_at         ON TABLE ent_requirement TYPE datetime
+    VALUE time::now();
+
+REMOVE EVENT IF EXISTS ev_ent_requirement_updated ON TABLE ent_requirement;
 
 
 -- ═════════════════════════════════════════════════════════════

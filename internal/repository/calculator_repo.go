@@ -33,9 +33,8 @@ func NewCalculatorRepository(pool *db.Pool) CalculatorRepository {
 // Логика:
 //  1. LET $s1, $s2 — находим предметы по уникальному коду (code).
 //  2. LET $groups  — группы ОП, которые требуют ОБА предмета (HAVING count() = 2).
-//  3. LET $specs   — специальности, принадлежащие этим группам.
-//  4. SELECT       — офферы вузов, где min_score <= балл абитуриента,
-//     с развёрнутыми данными вуза, специальности и группы через graph traversal.
+//  3. SELECT       — требования ЕНТ (ent_requirement), где min_score <= балл абитуриента,
+//     с развёрнутыми данными вуза и группы через graph traversal.
 //
 // Placeholder {{CITY_FILTER}} заменяется на фильтр по городу при необходимости.
 const calculatorBaseQuery = `
@@ -47,15 +46,7 @@ const calculatorBaseQuery = `
 
     LET $groups = array::intersect($g1, $g2);
 
-    LET $specs = (
-        SELECT VALUE id FROM specialty
-        WHERE ` + "`group`" + ` IN $groups
-    );
-
     SELECT
-        grant_count,
-        quota_grant_count,
-        tuition_fee,
         min_score,
         last_year_threshold,
         in.name       AS uni_name,
@@ -63,12 +54,10 @@ const calculatorBaseQuery = `
         in.city       AS uni_city,
         in.type       AS uni_type,
         in.logo_url   AS uni_logo,
-        out.code      AS spec_code,
-        out.name      AS spec_name,
-        out.` + "`group`" + `.code AS group_code,
-        out.` + "`group`" + `.name AS group_name
-    FROM offers
-    WHERE out IN $specs
+        out.code      AS group_code,
+        out.name      AS group_name
+    FROM ent_requirement
+    WHERE out IN $groups
       AND min_score <= $score
       {{CITY_FILTER}}
     ORDER BY min_score ASC;

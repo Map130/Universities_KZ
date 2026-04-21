@@ -64,8 +64,9 @@ type UniversityFilters struct {
 }
 
 // UniversityDetail — развёрнутое представление вуза со списком
-// предлагаемых специальностей (через графовую связь offers).
+// предлагаемых специальностей и требований к ЕНТ.
 type UniversityDetail struct {
-	University University           `json:"university"`
-	Offers     []OfferWithSpecialty `json:"offers"`
+	University      University                `json:"university"`
+	EntRequirements []EntRequirementWithGroup `json:"ent_requirements"`
+	Offers          []OfferWithSpecialty      `json:"offers"`
 }

@@ -37,17 +37,16 @@ type UniversityRepository interface {
 	Delete(ctx context.Context, id surrealmodels.RecordID) error
 
 	// CreateOffer создаёт графовую связь university -> specialty
-	// с данными о грантах и стоимости обучения.
-	CreateOffer(ctx context.Context, universityID, specialtyID surrealmodels.RecordID, input models.CreateOfferInput) (*models.Offers, error)
-
-	// UpdateOffer обновляет данные существующей связи offers по её ID.
-	UpdateOffer(ctx context.Context, id surrealmodels.RecordID, input models.CreateOfferInput) (*models.Offers, error)
-
-	// DeleteOffer удаляет графовую связь offers по её ID.
-	DeleteOffer(ctx context.Context, id surrealmodels.RecordID) error
+	CreateOffer(ctx context.Context, universityID, specialtyID surrealmodels.RecordID) (*models.Offers, error)
 
 	// DeleteAllOffers удаляет все связи offers для данного вуза.
 	DeleteAllOffers(ctx context.Context, universityID surrealmodels.RecordID) error
+
+	// CreateEntRequirement создаёт связь university -> specialty_group с баллами
+	CreateEntRequirement(ctx context.Context, universityID, groupID surrealmodels.RecordID, input models.CreateEntRequirementInput) (*models.EntRequirement, error)
+
+	// DeleteAllEntRequirements удаляет все связи ent_requirement для данного вуза.
+	DeleteAllEntRequirements(ctx context.Context, universityID surrealmodels.RecordID) error
 }
 
 // surrealUniversityRepo — реализация UniversityRepository поверх SurrealDB.
@@ -167,13 +166,7 @@ func (r *surrealUniversityRepo) GetWithSpecialties(ctx context.Context, id surre
 		return nil, fmt.Errorf("university.GetWithSpecialties: %w", err)
 	}
 
-	// 2. Графовый запрос: все связи offers для этого вуза с
-	//    развёрнутыми объектами специальностей (FETCH out).
-	//
-	//    SELECT * FROM offers WHERE in = $uni_id FETCH out
-	//
-	//    FETCH out заменяет RecordID в поле `out` на полный
-	//    объект specialty, что маппится в OfferWithSpecialty.Out.
+	// 2. Графовый запрос для offers
 	offerResults, err := surrealdb.Query[[]models.OfferWithSpecialty](
 		ctx, r.pool.Get(),
 		"SELECT * FROM offers WHERE in = $uni_id FETCH out",
@@ -191,14 +184,36 @@ func (r *surrealUniversityRepo) GetWithSpecialties(ctx context.Context, id surre
 		}
 		offers = first.Result
 	}
-
 	if offers == nil {
 		offers = []models.OfferWithSpecialty{}
 	}
 
+	// 3. Графовый запрос для ent_requirements
+	reqResults, err := surrealdb.Query[[]models.EntRequirementWithGroup](
+		ctx, r.pool.Get(),
+		"SELECT * FROM ent_requirement WHERE in = $uni_id FETCH out",
+		map[string]any{"uni_id": id},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("university.GetWithSpecialties: ent_req query: %w", err)
+	}
+
+	var reqs []models.EntRequirementWithGroup
+	if reqResults != nil && len(*reqResults) > 0 {
+		first := (*reqResults)[0]
+		if first.Error != nil {
+			return nil, fmt.Errorf("university.GetWithSpecialties: ent_reqs: %w", first.Error)
+		}
+		reqs = first.Result
+	}
+	if reqs == nil {
+		reqs = []models.EntRequirementWithGroup{}
+	}
+
 	return &models.UniversityDetail{
-		University: *uni,
-		Offers:     offers,
+		University:      *uni,
+		Offers:          offers,
+		EntRequirements: reqs,
 	}, nil
 }
 
@@ -324,19 +339,12 @@ func (r *surrealUniversityRepo) Delete(ctx context.Context, id surrealmodels.Rec
 func (r *surrealUniversityRepo) CreateOffer(
 	ctx context.Context,
 	universityID, specialtyID surrealmodels.RecordID,
-	input models.CreateOfferInput,
 ) (*models.Offers, error) {
 	rel := &surrealdb.Relationship{
 		In:       universityID,
 		Out:      specialtyID,
 		Relation: surrealmodels.Table("offers"),
-		Data: map[string]any{
-			"grant_count":         input.GrantCount,
-			"quota_grant_count":   input.QuotaGrantCount,
-			"tuition_fee":         input.TuitionFee,
-			"min_score":           input.MinScore,
-			"last_year_threshold": input.LastYearThreshold,
-		},
+		Data:     map[string]any{},
 	}
 
 	result, err := surrealdb.Relate[models.Offers](ctx, r.pool.Get(), rel)
@@ -345,41 +353,6 @@ func (r *surrealUniversityRepo) CreateOffer(
 	}
 
 	return result, nil
-}
-
-// ---------------------------------------------------------------------------
-//  UpdateOffer  (обновление данных связи offers)
-// ---------------------------------------------------------------------------
-
-func (r *surrealUniversityRepo) UpdateOffer(
-	ctx context.Context,
-	id surrealmodels.RecordID,
-	input models.CreateOfferInput,
-) (*models.Offers, error) {
-	data := map[string]any{
-		"grant_count":         input.GrantCount,
-		"quota_grant_count":   input.QuotaGrantCount,
-		"tuition_fee":         input.TuitionFee,
-		"min_score":           input.MinScore,
-		"last_year_threshold": input.LastYearThreshold,
-	}
-
-	result, err := surrealdb.Merge[models.Offers](ctx, r.pool.Get(), id, data)
-	if err != nil {
-		return nil, fmt.Errorf("university.UpdateOffer: %w", err)
-	}
-	return result, nil
-}
-
-// ---------------------------------------------------------------------------
-//  DeleteOffer  (удаление одной связи offers по ID)
-// ---------------------------------------------------------------------------
-
-func (r *surrealUniversityRepo) DeleteOffer(ctx context.Context, id surrealmodels.RecordID) error {
-	if _, err := surrealdb.Delete[models.Offers](ctx, r.pool.Get(), id); err != nil {
-		return fmt.Errorf("university.DeleteOffer: %w", err)
-	}
-	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -394,6 +367,49 @@ func (r *surrealUniversityRepo) DeleteAllOffers(ctx context.Context, universityI
 	)
 	if err != nil {
 		return fmt.Errorf("university.DeleteAllOffers: %w", err)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+//  CreateEntRequirement  (university ──ent_requirement──▶ specialty_group)
+// ---------------------------------------------------------------------------
+
+func (r *surrealUniversityRepo) CreateEntRequirement(
+	ctx context.Context,
+	universityID, groupID surrealmodels.RecordID,
+	input models.CreateEntRequirementInput,
+) (*models.EntRequirement, error) {
+	rel := &surrealdb.Relationship{
+		In:       universityID,
+		Out:      groupID,
+		Relation: surrealmodels.Table("ent_requirement"),
+		Data: map[string]any{
+			"min_score":           input.MinScore,
+			"last_year_threshold": input.LastYearThreshold,
+		},
+	}
+
+	result, err := surrealdb.Relate[models.EntRequirement](ctx, r.pool.Get(), rel)
+	if err != nil {
+		return nil, fmt.Errorf("university.CreateEntRequirement: %w", err)
+	}
+
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+//  DeleteAllEntRequirements
+// ---------------------------------------------------------------------------
+
+func (r *surrealUniversityRepo) DeleteAllEntRequirements(ctx context.Context, universityID surrealmodels.RecordID) error {
+	_, err := surrealdb.Query[any](
+		ctx, r.pool.Get(),
+		"DELETE FROM ent_requirement WHERE in = $uni_id",
+		map[string]any{"uni_id": universityID},
+	)
+	if err != nil {
+		return fmt.Errorf("university.DeleteAllEntRequirements: %w", err)
 	}
 	return nil
 }

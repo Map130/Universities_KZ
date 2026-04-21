@@ -25,10 +25,7 @@ type CalculatorRequest struct {
 // Маппится на результат SELECT с алиасами (uni_name, spec_code и т.д.).
 // Используется только внутри репозитория для десериализации.
 type CalculatorRow struct {
-	// Поля из offers
-	GrantCount        int `json:"grant_count" cbor:"grant_count"`
-	QuotaGrantCount   int `json:"quota_grant_count" cbor:"quota_grant_count"`
-	TuitionFee        int `json:"tuition_fee" cbor:"tuition_fee"`
+	// Поля из ent_requirement
 	MinScore          int `json:"min_score" cbor:"min_score"`
 	LastYearThreshold int `json:"last_year_threshold" cbor:"last_year_threshold"`
 
@@ -39,23 +36,18 @@ type CalculatorRow struct {
 	UniType string        `json:"uni_type" cbor:"uni_type"`
 	UniLogo *string       `json:"uni_logo" cbor:"uni_logo"`
 
-	// Алиасы из SELECT — специальность
-	SpecCode string        `json:"spec_code" cbor:"spec_code"`
-	SpecName LocalizedName `json:"spec_name" cbor:"spec_name"`
-
 	// Алиасы из SELECT — группа ОП
 	GroupCode string        `json:"group_code" cbor:"group_code"`
 	GroupName LocalizedName `json:"group_name" cbor:"group_name"`
 }
 
 // CalculatorResult — один элемент результата калькулятора.
-// Содержит вуз, специальность, группу ОП и условия поступления.
+// Содержит вуз, группу ОП и условия поступления.
 type CalculatorResult struct {
-	University UniversityShort `json:"university"`
-	Specialty  SpecialtyShort  `json:"specialty"`
-	Group      GroupShort      `json:"group"`
-	Offer      OfferInfo       `json:"offer"`
-	Grant      bool            `json:"grant"`
+	University UniversityShort    `json:"university"`
+	Group      GroupShort         `json:"group"`
+	EntReq     EntRequirementInfo `json:"ent_req"`
+	Grant      bool               `json:"grant"`
 }
 
 // UniversityShort — краткая информация о вузе для калькулятора.
@@ -67,23 +59,14 @@ type UniversityShort struct {
 	LogoURL *string       `json:"logo_url,omitempty"`
 }
 
-// SpecialtyShort — краткая информация о специальности для калькулятора.
-type SpecialtyShort struct {
-	Code string        `json:"code"`
-	Name LocalizedName `json:"name"`
-}
-
 // GroupShort — краткая информация о группе ОП для калькулятора.
 type GroupShort struct {
 	Code string        `json:"code"`
 	Name LocalizedName `json:"name"`
 }
 
-// OfferInfo — условия поступления из связи offers.
-type OfferInfo struct {
-	GrantCount        int `json:"grant_count"`
-	QuotaGrantCount   int `json:"quota_grant_count"`
-	TuitionFee        int `json:"tuition_fee"`
+// EntRequirementInfo — условия поступления из связи ent_requirement.
+type EntRequirementInfo struct {
 	MinScore          int `json:"min_score"`
 	LastYearThreshold int `json:"last_year_threshold"`
 }
@@ -106,18 +89,11 @@ func (row *CalculatorRow) ToResult(score int) CalculatorResult {
 			Type:    row.UniType,
 			LogoURL: row.UniLogo,
 		},
-		Specialty: SpecialtyShort{
-			Code: row.SpecCode,
-			Name: row.SpecName,
-		},
 		Group: GroupShort{
 			Code: row.GroupCode,
 			Name: row.GroupName,
 		},
-		Offer: OfferInfo{
-			GrantCount:        row.GrantCount,
-			QuotaGrantCount:   row.QuotaGrantCount,
-			TuitionFee:        row.TuitionFee,
+		EntReq: EntRequirementInfo{
 			MinScore:          row.MinScore,
 			LastYearThreshold: row.LastYearThreshold,
 		},

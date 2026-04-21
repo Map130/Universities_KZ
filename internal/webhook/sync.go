@@ -106,14 +106,15 @@ func processUniversity(ctx context.Context, filename string, data []byte, repos 
 		return nil
 	}
 
-	type OfferInput struct {
-		SpecialtyCode string `yaml:"specialty_code"`
-		models.CreateOfferInput `yaml:",inline"`
+	type SpecialtyGroupInput struct {
+		GroupCode                        string `yaml:"group_code"`
+		models.CreateEntRequirementInput `yaml:",inline"`
 	}
 
 	type UniversityFile struct {
 		models.University `yaml:",inline"`
-		Offers            []OfferInput `yaml:"offers"`
+		SpecialtyGroups   []SpecialtyGroupInput `yaml:"specialty_groups"`
+		Specialties       []string              `yaml:"specialties"`
 	}
 
 	var fileData UniversityFile
@@ -130,18 +131,33 @@ func processUniversity(ctx context.Context, filename string, data []byte, repos 
 		return fmt.Errorf("failed to update university %s: %w", idStr, err)
 	}
 
+	// Recreate ent_requirements
+	if err := repos.Universities().DeleteAllEntRequirements(ctx, recordID); err != nil {
+		return fmt.Errorf("failed to clear ent_requirements for university %s: %w", idStr, err)
+	}
+
+	for _, groupInput := range fileData.SpecialtyGroups {
+		if groupInput.GroupCode == "" {
+			continue
+		}
+		groupID := surrealmodels.NewRecordID("specialty_group", strings.ToLower(groupInput.GroupCode))
+		if _, err := repos.Universities().CreateEntRequirement(ctx, recordID, groupID, groupInput.CreateEntRequirementInput); err != nil {
+			return fmt.Errorf("failed to create ent_req for university %s, group %s: %w", idStr, groupInput.GroupCode, err)
+		}
+	}
+
 	// Recreate offers
 	if err := repos.Universities().DeleteAllOffers(ctx, recordID); err != nil {
 		return fmt.Errorf("failed to clear offers for university %s: %w", idStr, err)
 	}
 
-	for _, offerInput := range fileData.Offers {
-		if offerInput.SpecialtyCode == "" {
+	for _, specCode := range fileData.Specialties {
+		if specCode == "" {
 			continue
 		}
-		specID := surrealmodels.NewRecordID("specialty", strings.ToLower(offerInput.SpecialtyCode))
-		if _, err := repos.Universities().CreateOffer(ctx, recordID, specID, offerInput.CreateOfferInput); err != nil {
-			return fmt.Errorf("failed to create offer for university %s, specialty %s: %w", idStr, offerInput.SpecialtyCode, err)
+		specID := surrealmodels.NewRecordID("specialty", strings.ToLower(specCode))
+		if _, err := repos.Universities().CreateOffer(ctx, recordID, specID); err != nil {
+			return fmt.Errorf("failed to create offer for university %s, specialty %s: %w", idStr, specCode, err)
 		}
 	}
 

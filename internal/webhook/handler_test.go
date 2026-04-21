@@ -47,16 +47,19 @@ func (m *mockUniRepo) CreateOffer(ctx context.Context, universityID, specialtyID
 type mockSpecRepo struct {
 	repository.SpecialtyRepository
 }
+
 func (m *mockSpecRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error { return nil }
 
 type mockGroupRepo struct {
 	repository.SpecialtyGroupRepository
 }
+
 func (m *mockGroupRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error { return nil }
 
 type mockSubjectRepo struct {
 	repository.SubjectRepository
 }
+
 func (m *mockSubjectRepo) Delete(ctx context.Context, id surrealmodels.RecordID) error { return nil }
 
 func TestSyncChangedFiles_IgnoredBranch(t *testing.T) {
