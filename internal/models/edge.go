@@ -9,26 +9,40 @@ import (
 // ──────────────────────────────────────────────────────────────
 
 type Offers struct {
+	ID        *surrealmodels.RecordID       `json:"id,omitempty" cbor:"id,omitempty" yaml:"id,omitempty"`
+	In        surrealmodels.RecordID        `json:"in" cbor:"in" yaml:"in"`
+	Out       surrealmodels.RecordID        `json:"out" cbor:"out" yaml:"out"`
+	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty" yaml:"created_at,omitempty"`
+	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty" yaml:"updated_at,omitempty"`
+}
+
+// OfferWithSpecialty — результат `SELECT * FROM offers WHERE in = $id FETCH out`.
+type OfferWithSpecialty struct {
+	ID        *surrealmodels.RecordID       `json:"id,omitempty" cbor:"id,omitempty" yaml:"id,omitempty"`
+	In        surrealmodels.RecordID        `json:"in" cbor:"in" yaml:"in"`
+	Out       Specialty                     `json:"out" cbor:"out" yaml:"out"`
+	CreatedAt *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty" yaml:"created_at,omitempty"`
+	UpdatedAt *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty" yaml:"updated_at,omitempty"`
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Edge: ent_requirement   (university ──ent_requirement──▶ specialty_group)
+// ──────────────────────────────────────────────────────────────
+
+type EntRequirement struct {
 	ID                *surrealmodels.RecordID       `json:"id,omitempty" cbor:"id,omitempty" yaml:"id,omitempty"`
 	In                surrealmodels.RecordID        `json:"in" cbor:"in" yaml:"in"`
 	Out               surrealmodels.RecordID        `json:"out" cbor:"out" yaml:"out"`
-	GrantCount        int                           `json:"grant_count" cbor:"grant_count" yaml:"grant_count"`
-	QuotaGrantCount   int                           `json:"quota_grant_count" cbor:"quota_grant_count" yaml:"quota_grant_count"`
-	TuitionFee        int                           `json:"tuition_fee" cbor:"tuition_fee" yaml:"tuition_fee"`
 	MinScore          int                           `json:"min_score" cbor:"min_score" yaml:"min_score"`
 	LastYearThreshold int                           `json:"last_year_threshold" cbor:"last_year_threshold" yaml:"last_year_threshold"`
 	CreatedAt         *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty" yaml:"created_at,omitempty"`
 	UpdatedAt         *surrealmodels.CustomDateTime `json:"updated_at,omitempty" cbor:"updated_at,omitempty" yaml:"updated_at,omitempty"`
 }
 
-// OfferWithSpecialty — результат `SELECT * FROM offers WHERE in = $id FETCH out`.
-type OfferWithSpecialty struct {
+type EntRequirementWithGroup struct {
 	ID                *surrealmodels.RecordID       `json:"id,omitempty" cbor:"id,omitempty" yaml:"id,omitempty"`
 	In                surrealmodels.RecordID        `json:"in" cbor:"in" yaml:"in"`
-	Out               Specialty                     `json:"out" cbor:"out" yaml:"out"`
-	GrantCount        int                           `json:"grant_count" cbor:"grant_count" yaml:"grant_count"`
-	QuotaGrantCount   int                           `json:"quota_grant_count" cbor:"quota_grant_count" yaml:"quota_grant_count"`
-	TuitionFee        int                           `json:"tuition_fee" cbor:"tuition_fee" yaml:"tuition_fee"`
+	Out               SpecialtyGroup                `json:"out" cbor:"out" yaml:"out"`
 	MinScore          int                           `json:"min_score" cbor:"min_score" yaml:"min_score"`
 	LastYearThreshold int                           `json:"last_year_threshold" cbor:"last_year_threshold" yaml:"last_year_threshold"`
 	CreatedAt         *surrealmodels.CustomDateTime `json:"created_at,omitempty" cbor:"created_at,omitempty" yaml:"created_at,omitempty"`
@@ -65,11 +79,8 @@ type RequiredSubject struct {
 //  Входные данные для создания связей
 // ──────────────────────────────────────────────────────────────
 
-// CreateOfferInput — параметры для создания связи university -> specialty.
-type CreateOfferInput struct {
-	GrantCount        int `json:"grant_count" cbor:"grant_count" yaml:"grant_count"`
-	QuotaGrantCount   int `json:"quota_grant_count" cbor:"quota_grant_count" yaml:"quota_grant_count"`
-	TuitionFee        int `json:"tuition_fee" cbor:"tuition_fee" yaml:"tuition_fee"`
+// CreateEntRequirementInput — параметры для создания связи university -> specialty_group.
+type CreateEntRequirementInput struct {
 	MinScore          int `json:"min_score" cbor:"min_score" yaml:"min_score"`
 	LastYearThreshold int `json:"last_year_threshold" cbor:"last_year_threshold" yaml:"last_year_threshold"`
 }

@@ -1,44 +1,49 @@
 basePath: /
 definitions:
-  github_com_Map130_universities_internal_models.CalculatorResponse:
+  models.CalculatorResponse:
     properties:
       results:
         items:
-          $ref: '#/definitions/github_com_Map130_universities_internal_models.CalculatorResult'
+          $ref: '#/definitions/models.CalculatorResult'
         type: array
       score:
         type: integer
       total:
         type: integer
     type: object
-  github_com_Map130_universities_internal_models.CalculatorResult:
+  models.CalculatorResult:
     properties:
+      ent_req:
+        $ref: '#/definitions/models.EntRequirementInfo'
       grant:
         type: boolean
       group:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.GroupShort'
-      offer:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.OfferInfo'
-      specialty:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SpecialtyShort'
+        $ref: '#/definitions/models.GroupShort'
       university:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.UniversityShort'
+        $ref: '#/definitions/models.UniversityShort'
     type: object
-  github_com_Map130_universities_internal_models.ErrorResponse:
+  models.EntRequirementInfo:
+    properties:
+      last_year_threshold:
+        type: integer
+      min_score:
+        type: integer
+    type: object
+  models.ErrorResponse:
     description: Стандартный ответ при ошибке
     properties:
       error:
         example: record not found
         type: string
     type: object
-  github_com_Map130_universities_internal_models.GroupShort:
+  models.GroupShort:
     properties:
       code:
         type: string
       name:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.LocalizedName'
+        $ref: '#/definitions/models.LocalizedName'
     type: object
-  github_com_Map130_universities_internal_models.HealthResponse:
+  models.HealthResponse:
     description: Ответ healthcheck-эндпоинта
     properties:
       db:
@@ -48,7 +53,7 @@ definitions:
         example: online
         type: string
     type: object
-  github_com_Map130_universities_internal_models.LocalizedName:
+  models.LocalizedName:
     properties:
       en:
         type: string
@@ -57,37 +62,41 @@ definitions:
       ru:
         type: string
     type: object
-  github_com_Map130_universities_internal_models.OfferInfo:
+  models.SwaggerEntRequirementWithGroup:
+    description: Требования ЕНТ к группе образовательных программ
     properties:
-      grant_count:
-        type: integer
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      id:
+        example: ent_requirement:abc123
+        type: string
+      in:
+        example: university:abc123
+        type: string
       last_year_threshold:
+        example: 85
         type: integer
       min_score:
+        example: 80
         type: integer
-      quota_grant_count:
-        type: integer
-      tuition_fee:
-        type: integer
-    type: object
-  github_com_Map130_universities_internal_models.SpecialtyShort:
-    properties:
-      code:
+      out:
+        $ref: '#/definitions/models.SwaggerSpecialtyGroup'
+      updated_at:
+        example: "2025-01-15T10:30:00Z"
         type: string
-      name:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.LocalizedName'
     type: object
-  github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects:
+  models.SwaggerGroupWithSubjects:
     description: Группа ОП с привязанными предметами ЕНТ
     properties:
       group:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup'
+        $ref: '#/definitions/models.SwaggerSpecialtyGroup'
       subjects:
         items:
-          $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerRequiredSubject'
+          $ref: '#/definitions/models.SwaggerRequiredSubject'
         type: array
     type: object
-  github_com_Map130_universities_internal_models.SwaggerLocalizedName:
+  models.SwaggerLocalizedName:
     description: Локализованное название (kz / ru / en)
     properties:
       en:
@@ -100,40 +109,25 @@ definitions:
         example: Информационные технологии
         type: string
     type: object
-  github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty:
+  models.SwaggerOfferWithSpecialty:
     description: Предложение вуза (связь offers) с развёрнутой специальностью
     properties:
       created_at:
         example: "2025-01-15T10:30:00Z"
         type: string
-      grant_count:
-        example: 25
-        type: integer
       id:
         example: offers:abc123
         type: string
       in:
         example: university:abc123
         type: string
-      last_year_threshold:
-        example: 85
-        type: integer
-      min_score:
-        example: 80
-        type: integer
       out:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialty'
-      quota_grant_count:
-        example: 5
-        type: integer
-      tuition_fee:
-        example: 1500000
-        type: integer
+        $ref: '#/definitions/models.SwaggerSpecialty'
       updated_at:
         example: "2025-01-15T10:30:00Z"
         type: string
     type: object
-  github_com_Map130_universities_internal_models.SwaggerRequiredSubject:
+  models.SwaggerRequiredSubject:
     description: Требуемый предмет ЕНТ для группы ОП
     properties:
       created_at:
@@ -146,7 +140,7 @@ definitions:
         example: specialty_group:b057
         type: string
       out:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSubject'
+        $ref: '#/definitions/models.SwaggerSubject'
       priority:
         enum:
         - 1
@@ -157,7 +151,7 @@ definitions:
         example: "2025-01-15T10:30:00Z"
         type: string
     type: object
-  github_com_Map130_universities_internal_models.SwaggerSpecialty:
+  models.SwaggerSpecialty:
     description: Специальность / образовательная программа
     properties:
       code:
@@ -173,12 +167,12 @@ definitions:
         example: specialty:xyz789
         type: string
       name:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName'
+        $ref: '#/definitions/models.SwaggerLocalizedName'
       updated_at:
         example: "2025-01-15T10:30:00Z"
         type: string
     type: object
-  github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup:
+  models.SwaggerSpecialtyGroup:
     description: Группа образовательных программ
     properties:
       code:
@@ -191,12 +185,12 @@ definitions:
         example: specialty_group:b057
         type: string
       name:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName'
+        $ref: '#/definitions/models.SwaggerLocalizedName'
       updated_at:
         example: "2025-01-15T10:30:00Z"
         type: string
     type: object
-  github_com_Map130_universities_internal_models.SwaggerSubject:
+  models.SwaggerSubject:
     description: Предмет ЕНТ
     properties:
       code:
@@ -209,12 +203,12 @@ definitions:
         example: subject:math
         type: string
       name:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName'
+        $ref: '#/definitions/models.SwaggerLocalizedName'
       updated_at:
         example: "2025-01-15T10:30:00Z"
         type: string
     type: object
-  github_com_Map130_universities_internal_models.SwaggerUniversity:
+  models.SwaggerUniversity:
     description: Университет Казахстана
     properties:
       abbr:
@@ -239,7 +233,7 @@ definitions:
         example: http://localhost:9000/logos/abc.png
         type: string
       name:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerLocalizedName'
+        $ref: '#/definitions/models.SwaggerLocalizedName'
       type:
         enum:
         - public
@@ -253,17 +247,21 @@ definitions:
         example: https://muit.edu.kz
         type: string
     type: object
-  github_com_Map130_universities_internal_models.SwaggerUniversityDetail:
-    description: Детальная информация о вузе с его специальностями
+  models.SwaggerUniversityDetail:
+    description: Детальная информация о вузе с его специальностями и проходными баллами
     properties:
+      ent_requirements:
+        items:
+          $ref: '#/definitions/models.SwaggerEntRequirementWithGroup'
+        type: array
       offers:
         items:
-          $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerOfferWithSpecialty'
+          $ref: '#/definitions/models.SwaggerOfferWithSpecialty'
         type: array
       university:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity'
+        $ref: '#/definitions/models.SwaggerUniversity'
     type: object
-  github_com_Map130_universities_internal_models.UniversityShort:
+  models.UniversityShort:
     properties:
       abbr:
         type: string
@@ -272,7 +270,7 @@ definitions:
       logo_url:
         type: string
       name:
-        $ref: '#/definitions/github_com_Map130_universities_internal_models.LocalizedName'
+        $ref: '#/definitions/models.LocalizedName'
       type:
         type: string
     type: object
@@ -334,15 +332,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.CalculatorResponse'
+            $ref: '#/definitions/models.CalculatorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Калькулятор поступления
       tags:
       - calculator
@@ -382,12 +380,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialtyGroup'
+              $ref: '#/definitions/models.SwaggerSpecialtyGroup'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Получить список групп образовательных программ
       tags:
       - groups
@@ -408,15 +406,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerGroupWithSubjects'
+            $ref: '#/definitions/models.SwaggerGroupWithSubjects'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Получить группу ОП по ID
       tags:
       - groups
@@ -461,12 +459,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSpecialty'
+              $ref: '#/definitions/models.SwaggerSpecialty'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Получить список специальностей
       tags:
       - specialties
@@ -480,12 +478,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerSubject'
+              $ref: '#/definitions/models.SwaggerSubject'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Получить список предметов ЕНТ
       tags:
       - subjects
@@ -537,12 +535,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversity'
+              $ref: '#/definitions/models.SwaggerUniversity'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Получить список вузов
       tags:
       - universities
@@ -563,15 +561,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.SwaggerUniversityDetail'
+            $ref: '#/definitions/models.SwaggerUniversityDetail'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Получить вуз по ID
       tags:
       - universities
@@ -584,7 +582,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_Map130_universities_internal_models.HealthResponse'
+            $ref: '#/definitions/models.HealthResponse'
       summary: Проверка состояния сервиса
       tags:
       - health

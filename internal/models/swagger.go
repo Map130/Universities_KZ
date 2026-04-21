@@ -88,23 +88,31 @@ type SwaggerSubject struct {
 // SwaggerOfferWithSpecialty — связь university→specialty с развёрнутой специальностью.
 // @Description Предложение вуза (связь offers) с развёрнутой специальностью
 type SwaggerOfferWithSpecialty struct {
-	ID                string           `json:"id" example:"offers:abc123"`
-	In                string           `json:"in" example:"university:abc123"`
-	Out               SwaggerSpecialty `json:"out"`
-	GrantCount        int              `json:"grant_count" example:"25"`
-	QuotaGrantCount   int              `json:"quota_grant_count" example:"5"`
-	TuitionFee        int              `json:"tuition_fee" example:"1500000"`
-	MinScore          int              `json:"min_score" example:"80"`
-	LastYearThreshold int              `json:"last_year_threshold" example:"85"`
-	CreatedAt         string           `json:"created_at,omitempty" example:"2025-01-15T10:30:00Z"`
-	UpdatedAt         string           `json:"updated_at,omitempty" example:"2025-01-15T10:30:00Z"`
+	ID        string           `json:"id" example:"offers:abc123"`
+	In        string           `json:"in" example:"university:abc123"`
+	Out       SwaggerSpecialty `json:"out"`
+	CreatedAt string           `json:"created_at,omitempty" example:"2025-01-15T10:30:00Z"`
+	UpdatedAt string           `json:"updated_at,omitempty" example:"2025-01-15T10:30:00Z"`
 }
 
-// SwaggerUniversityDetail — вуз со списком предлагаемых специальностей.
-// @Description Детальная информация о вузе с его специальностями
+// SwaggerEntRequirementWithGroup — связь ent_requirement с развёрнутой ГОП.
+// @Description Требования ЕНТ к группе образовательных программ
+type SwaggerEntRequirementWithGroup struct {
+	ID                string                `json:"id" example:"ent_requirement:abc123"`
+	In                string                `json:"in" example:"university:abc123"`
+	Out               SwaggerSpecialtyGroup `json:"out"`
+	MinScore          int                   `json:"min_score" example:"80"`
+	LastYearThreshold int                   `json:"last_year_threshold" example:"85"`
+	CreatedAt         string                `json:"created_at,omitempty" example:"2025-01-15T10:30:00Z"`
+	UpdatedAt         string                `json:"updated_at,omitempty" example:"2025-01-15T10:30:00Z"`
+}
+
+// SwaggerUniversityDetail — вуз со списком предлагаемых специальностей и требований.
+// @Description Детальная информация о вузе с его специальностями и проходными баллами
 type SwaggerUniversityDetail struct {
-	University SwaggerUniversity           `json:"university"`
-	Offers     []SwaggerOfferWithSpecialty `json:"offers"`
+	University      SwaggerUniversity                `json:"university"`
+	EntRequirements []SwaggerEntRequirementWithGroup `json:"ent_requirements"`
+	Offers          []SwaggerOfferWithSpecialty      `json:"offers"`
 }
 
 // SwaggerRequiredSubject — связь requires с развёрнутым предметом.
@@ -140,11 +148,11 @@ type SwaggerCalculatorResponse struct {
 // SwaggerCalculatorResult — один элемент результата калькулятора.
 // @Description Доступный вуз и специальность для абитуриента
 type SwaggerCalculatorResult struct {
-	University SwaggerUniversityShort `json:"university"`
-	Specialty  SwaggerSpecialtyShort  `json:"specialty"`
-	Group      SwaggerGroupShort      `json:"group"`
-	Offer      SwaggerOfferInfo       `json:"offer"`
-	Grant      bool                   `json:"grant" example:"true"`
+	University SwaggerUniversityShort    `json:"university"`
+	Specialty  SwaggerSpecialtyShort     `json:"specialty"`
+	Group      SwaggerGroupShort         `json:"group"`
+	EntReq     SwaggerEntRequirementInfo `json:"ent_req"`
+	Grant      bool                      `json:"grant" example:"true"`
 }
 
 // SwaggerUniversityShort — краткая информация о вузе.
@@ -171,12 +179,9 @@ type SwaggerGroupShort struct {
 	Name SwaggerLocalizedName `json:"name"`
 }
 
-// SwaggerOfferInfo — условия поступления.
-// @Description Условия поступления (гранты, стоимость, проходной балл)
-type SwaggerOfferInfo struct {
-	GrantCount        int `json:"grant_count" example:"50"`
-	QuotaGrantCount   int `json:"quota_grant_count" example:"10"`
-	TuitionFee        int `json:"tuition_fee" example:"1500000"`
+// SwaggerEntRequirementInfo — условия поступления.
+// @Description Условия поступления (проходной балл)
+type SwaggerEntRequirementInfo struct {
 	MinScore          int `json:"min_score" example:"50"`
 	LastYearThreshold int `json:"last_year_threshold" example:"90"`
 }

@@ -120,22 +120,18 @@ templ CalculatorResults(results []models.CalculatorResult) {
 					</div>
 
 					<div class="result-card__specialty">
-						<div class="result-card__specialty-code">{ res.Specialty.Code } · { res.Group.Code }</div>
-						<div class="result-card__specialty-name">{ res.Specialty.Name.RU }</div>
+						<div class="result-card__specialty-code">ГОП { res.Group.Code }</div>
+						<div class="result-card__specialty-name">{ res.Group.Name.RU }</div>
 					</div>
 
 					<div class="result-card__stats">
 						<div class="result-stat">
 							<div class="result-stat__label">Мин. балл</div>
-							<div class="result-stat__value">{ fmt.Sprintf("%d", res.Offer.MinScore) }</div>
+							<div class="result-stat__value">{ fmt.Sprintf("%d", res.EntReq.MinScore) }</div>
 						</div>
 						<div class="result-stat">
 							<div class="result-stat__label">На грант</div>
-							<div class="result-stat__value" style={ templ.KV("color: var(--color-success)", res.Grant) }>{ fmt.Sprintf("%d", res.Offer.LastYearThreshold) }</div>
-						</div>
-						<div class="result-stat">
-							<div class="result-stat__label">Грантов</div>
-							<div class="result-stat__value">{ fmt.Sprintf("%d", res.Offer.GrantCount) }</div>
+							<div class="result-stat__value" style={ templ.KV("color: var(--color-success)", res.Grant) }>{ fmt.Sprintf("%d", res.EntReq.LastYearThreshold) }</div>
 						</div>
 					</div>
 				</div>

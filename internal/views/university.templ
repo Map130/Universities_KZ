@@ -49,46 +49,52 @@ templ UniversityDetail(detail models.UniversityDetail) {
 			</div>
 
 			<div class="page-header">
-				<h2>Образовательные программы</h2>
-				<p>{ fmt.Sprintf("%d", len(detail.Offers)) } специальностей в этом вузе</p>
+				<h2>Проходные баллы на грант (ГОП)</h2>
+				<p>{ fmt.Sprintf("%d", len(detail.EntRequirements)) } групп образовательных программ</p>
+			</div>
+
+			if len(detail.EntRequirements) == 0 {
+				<div class="empty-state">
+					<div class="empty-state__icon">📋</div>
+					<h3>Нет данных о проходных баллах</h3>
+				</div>
+			} else {
+				<div class="card-grid">
+					for _, req := range detail.EntRequirements {
+						<div class="offer-card">
+							<div class="offer-card__code">ГОП { req.Out.Code }</div>
+							<div class="offer-card__name">{ req.Out.Name.RU }</div>
+							<div class="offer-stats">
+								<div class="offer-stat">
+									<div class="offer-stat__label">Мин. балл ЕНТ</div>
+									<div class="offer-stat__value">{ fmt.Sprintf("%d", req.MinScore) }</div>
+								</div>
+								<div class="offer-stat">
+									<div class="offer-stat__label">Порог гранта (прошлый год)</div>
+									<div class="offer-stat__value offer-stat__value--success">{ fmt.Sprintf("%d", req.LastYearThreshold) }</div>
+								</div>
+							</div>
+						</div>
+					}
+				</div>
+			}
+
+			<div class="page-header" style="margin-top: 3rem;">
+				<h2>Образовательные программы (ОП)</h2>
+				<p>{ fmt.Sprintf("%d", len(detail.Offers)) } специальностей</p>
 			</div>
 
 			if len(detail.Offers) == 0 {
 				<div class="empty-state">
-					<div class="empty-state__icon">📋</div>
+					<div class="empty-state__icon">📘</div>
 					<h3>Нет данных о специальностях</h3>
-					<p>Информация по этому вузу пока не добавлена</p>
 				</div>
 			} else {
 				<div class="card-grid">
 					for _, offer := range detail.Offers {
-						<div class="offer-card">
+						<div class="offer-card" style="padding: 1rem;">
 							<div class="offer-card__code">{ offer.Out.Code }</div>
 							<div class="offer-card__name">{ offer.Out.Name.RU }</div>
-							<div class="offer-stats">
-								<div class="offer-stat">
-									<div class="offer-stat__label">Мин. балл ЕНТ</div>
-									<div class="offer-stat__value">{ fmt.Sprintf("%d", offer.MinScore) }</div>
-								</div>
-								<div class="offer-stat">
-									<div class="offer-stat__label">Порог гранта</div>
-									<div class="offer-stat__value offer-stat__value--success">{ fmt.Sprintf("%d", offer.LastYearThreshold) }</div>
-								</div>
-								<div class="offer-stat">
-									<div class="offer-stat__label">Кол-во грантов</div>
-									<div class="offer-stat__value offer-stat__value--primary">{ fmt.Sprintf("%d", offer.GrantCount) }</div>
-								</div>
-								<div class="offer-stat">
-									<div class="offer-stat__label">Стоимость (₸/год)</div>
-									<div class="offer-stat__value">
-										if offer.TuitionFee > 0 {
-											{ fmt.Sprintf("%d", offer.TuitionFee) }
-										} else {
-											—
-										}
-									</div>
-								</div>
-							</div>
 						</div>
 					}
 				</div>

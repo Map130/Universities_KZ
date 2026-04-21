@@ -40,27 +40,15 @@
       "format": "uri",
       "description": "URL to the university's logo"
     },
-    "offers": {
+    "specialty_groups": {
       "type": "array",
-      "description": "List of specialties offered by the university",
+      "description": "List of educational program groups (ГОП) with ENT score requirements",
       "items": {
         "type": "object",
         "properties": {
-          "specialty_code": {
+          "group_code": {
             "type": "string",
-            "description": "Code of the offered specialty"
-          },
-          "grant_count": {
-            "type": "integer",
-            "description": "Number of regular grants available"
-          },
-          "quota_grant_count": {
-            "type": "integer",
-            "description": "Number of quota grants available"
-          },
-          "tuition_fee": {
-            "type": "number",
-            "description": "Annual tuition fee in local currency"
+            "description": "Code of the educational program group"
           },
           "min_score": {
             "type": "integer",
@@ -72,13 +60,17 @@
           }
         },
         "required": [
-          "specialty_code",
-          "grant_count",
-          "quota_grant_count",
-          "tuition_fee",
+          "group_code",
           "min_score",
           "last_year_threshold"
         ]
+      }
+    },
+    "specialties": {
+      "type": "array",
+      "description": "List of specific specialties (ОП) offered by the university",
+      "items": {
+        "type": "string"
       }
     },
     "metadata": {
@@ -103,6 +95,7 @@
     "type",
     "website",
     "description",
-    "offers"
+    "specialty_groups",
+    "specialties"
   ]
 }
