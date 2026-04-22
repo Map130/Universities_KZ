@@ -166,7 +166,7 @@ func GroupsPage(groups []models.SpecialtyGroup, page int) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				if len(groups) == 20 {
+				if len(groups) == 21 {
 					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<a href=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
