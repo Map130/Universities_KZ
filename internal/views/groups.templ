@@ -49,7 +49,7 @@ templ GroupsPage(groups []models.SpecialtyGroup, page int) {
 
 					<span class="pagination__page">Страница { fmt.Sprintf("%d", page) }</span>
 
-					if len(groups) == 20 {
+					if len(groups) == 21 {
 						<a href={ templ.SafeURL(fmt.Sprintf("/groups?page=%d", page+1)) } class="btn btn-ghost btn-sm">
 							Вперёд →
 						</a>
